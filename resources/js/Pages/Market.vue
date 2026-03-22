@@ -1,0 +1,218 @@
+<script setup>
+import AppLayout from '@/Layouts/AppLayout.vue';
+import CoinAnalysisModal from '@/Components/CoinAnalysisModal.vue';
+import MobileChartModal from '@/Components/MobileChartModal.vue';
+import { onMounted, ref } from 'vue';
+
+const showAnalysis = ref(false);
+const showMobileChart = ref(false);
+const selectedCoin = ref(null);
+
+// FAKE MARKET DATA
+const marketData = ref([
+    { rank: 1, name: 'Bitcoin', symbol: 'BTC', price: '68,450.00', change: '+2.4%', marketCap: '1.2T' },
+    { rank: 2, name: 'Ethereum', symbol: 'ETH', price: '3,890.00', change: '-1.2%', marketCap: '450B' },
+    { rank: 3, name: 'Solana', symbol: 'SOL', price: '145.20', change: '+8.5%', marketCap: '85B' },
+    { rank: 4, name: 'Binance Coin', symbol: 'BNB', price: '590.00', change: '+0.5%', marketCap: '80B' },
+    { rank: 5, name: 'Ripple', symbol: 'XRP', price: '0.62', change: '-0.8%', marketCap: '34B' },
+    { rank: 6, name: 'Cardano', symbol: 'ADA', price: '0.45', change: '-1.5%', marketCap: '16B' },
+    { rank: 7, name: 'Dogecoin', symbol: 'DOGE', price: '0.12', change: '+12.5%', marketCap: '18B' },
+    { rank: 8, name: 'Polkadot', symbol: 'DOT', price: '7.20', change: '-0.5%', marketCap: '10B' },
+]);
+
+const aiSummary = {
+    sentiment: 'Bearish',
+    score: 32,
+    text: "Global markets are reacting to the latest CPI data release. FinSight AI detects a high probability of short-term volatility. Major support levels for BTC are being tested, while institutional outflows have increased by 15% in the last 4 hours. Recommended strategy: Reduce leverage and monitor stablecoin dominance."
+};
+
+const analyzeCoin = (coin) => {
+    selectedCoin.value = coin;
+    showAnalysis.value = true;
+};
+
+const openChart = (coin) => {
+    selectedCoin.value = coin;
+    showMobileChart.value = true;
+};
+
+onMounted(() => {
+    const script = document.createElement('script');
+    script.src = 'https://s3.tradingview.com/tv.js';
+    script.async = true;
+    script.onload = () => {
+        new TradingView.widget({
+            "width": "100%",
+            "height": "100%",
+            "symbol": "BINANCE:BTCUSDT",
+            "interval": "D",
+            "timezone": "Etc/UTC",
+            "theme": "dark",
+            "style": "1",
+            "locale": "en",
+            "toolbar_bg": "#1f2937",
+            "enable_publishing": false,
+            "allow_symbol_change": true,
+            "container_id": "tradingview_chart"
+        });
+    };
+    document.head.appendChild(script);
+});
+</script>
+
+<template>
+    <AppLayout title="Market Intelligence">
+
+        <div class="py-4 lg:py-6">
+            <div class="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 space-y-4 lg:space-y-6">
+
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 lg:gap-6">
+
+                    <div
+                        class="bg-gray-800 p-4 lg:p-6 shadow-xl rounded-lg border-t-4 border-red-500 col-span-1 flex flex-row lg:flex-col items-center lg:items-stretch justify-between lg:justify-center">
+
+                        <div>
+                            <h3
+                                class="text-gray-400 font-bold uppercase text-[10px] lg:text-xs tracking-wider mb-1 lg:mb-2">
+                                Market Sentiment</h3>
+                            <span class="text-2xl lg:text-4xl font-black text-red-500 block">{{ aiSummary.sentiment
+                            }}</span>
+                        </div>
+
+                        <div class="text-right lg:text-left lg:mt-4 w-1/2 lg:w-full">
+                            <div class="flex items-baseline justify-end lg:justify-between mb-1">
+                                <span class="hidden lg:inline text-xs text-gray-500">Confidence</span>
+                                <div>
+                                    <span class="text-xl lg:text-2xl font-bold text-white">{{ aiSummary.score }}</span>
+                                    <span class="text-xs text-gray-500">/100</span>
+                                </div>
+                            </div>
+                            <div class="w-full bg-gray-700 rounded-full h-1.5 lg:h-2">
+                                <div class="h-1.5 lg:h-2 rounded-full bg-red-600 shadow-[0_0_10px_rgba(220,38,38,0.5)]"
+                                    style="width: 32%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div
+                        class="bg-black p-4 lg:p-6 shadow-xl rounded-lg text-white border border-gray-700 col-span-1 lg:col-span-3">
+                        <div class="flex justify-between items-center mb-2 lg:mb-3">
+                            <h3 class="font-bold text-teal-400 flex items-center text-sm lg:text-lg">
+                                <span class="mr-2">✨</span> FinSight Market Abstract
+                            </h3>
+                            <span
+                                class="text-[10px] lg:text-xs bg-gray-900 text-gray-400 px-2 lg:px-3 py-1 rounded border border-gray-700">2m
+                                ago</span>
+                        </div>
+                        <p class="text-gray-300 leading-relaxed text-xs lg:text-base line-clamp-3 lg:line-clamp-none">
+                            {{ aiSummary.text }}
+                        </p>
+                        <div class="mt-4 hidden lg:flex space-x-2">
+                            <span
+                                class="text-xs border border-gray-600 bg-gray-700/50 px-3 py-1 rounded-full text-gray-300">#MacroEconomics</span>
+                            <span
+                                class="text-xs border border-gray-600 bg-gray-700/50 px-3 py-1 rounded-full text-gray-300">#VolatilityAlert</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 h-auto lg:h-[600px]">
+
+                    <div
+                        class="hidden lg:block lg:col-span-9 bg-gray-800 shadow-xl rounded-lg overflow-hidden border border-gray-700 h-full">
+                        <div id="tradingview_chart" class="h-full bg-gray-900"></div>
+                    </div>
+
+                    <div
+                        class="col-span-1 lg:col-span-3 bg-gray-800 shadow-xl rounded-lg border border-gray-700 flex flex-col h-[600px] lg:h-full">
+
+                        <div
+                            class="p-4 bg-gray-900 border-b border-gray-700 flex justify-between items-center shrink-0">
+                            <h3 class="font-bold text-white text-sm">Market Scanner</h3>
+                            <span class="text-xs text-teal-400">Live Prices</span>
+                        </div>
+
+                        <div class="overflow-y-auto flex-1 custom-scrollbar">
+                            <table class="min-w-full divide-y divide-gray-700">
+                                <thead class="bg-gray-800 sticky top-0 z-10">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-bold text-gray-400 uppercase">Asset
+                                        </th>
+                                        <th class="px-4 py-3 text-right text-xs font-bold text-gray-400 uppercase">Price
+                                        </th>
+                                        <th class="px-4 py-3 text-right text-xs font-bold text-gray-400 uppercase">
+                                            Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-gray-800 divide-y divide-gray-700">
+                                    <tr v-for="coin in marketData" :key="coin.symbol"
+                                        class="hover:bg-gray-700/50 transition duration-150">
+
+                                        <td class="px-4 py-3 whitespace-nowrap cursor-pointer lg:cursor-default"
+                                            @click="openChart(coin)">
+                                            <div class="flex items-center">
+                                                <div class="font-bold text-white text-sm mr-2">{{ coin.symbol }}</div>
+                                                <div class="text-xs hidden sm:block"
+                                                    :class="coin.change.includes('+') ? 'text-emerald-400' : 'text-red-400'">
+                                                    {{ coin.change }}
+                                                </div>
+                                            </div>
+                                            <div class="text-xs sm:hidden mt-1"
+                                                :class="coin.change.includes('+') ? 'text-emerald-400' : 'text-red-400'">
+                                                {{ coin.change }}
+                                            </div>
+                                        </td>
+
+                                        <td
+                                            class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium text-gray-200">
+                                            ${{ coin.price }}
+                                        </td>
+
+                                        <td class="px-4 py-3 whitespace-nowrap text-right">
+                                            <div class="flex justify-end space-x-2">
+                                                <button @click="openChart(coin)"
+                                                    class="lg:hidden p-2 rounded-lg bg-gray-700 text-gray-300 hover:bg-gray-600 border border-gray-600">
+                                                    📊
+                                                </button>
+
+                                                <button @click="analyzeCoin(coin)"
+                                                    class="group p-2 rounded-lg bg-teal-500/10 text-teal-400 hover:bg-teal-500 hover:text-white transition border border-teal-500/30 flex items-center justify-center">
+
+                                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor"
+                                                        viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                            stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                                    </svg>
+
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <CoinAnalysisModal :show="showAnalysis" :coin="selectedCoin" @close="showAnalysis = false" />
+        <MobileChartModal :show="showMobileChart" :symbol="selectedCoin?.symbol" @close="showMobileChart = false" />
+
+    </AppLayout>
+</template>
+
+<style scoped>
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: #1f2937;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #4b5563;
+    border-radius: 3px;
+}
+</style>
