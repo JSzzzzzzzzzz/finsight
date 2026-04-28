@@ -3,6 +3,8 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use App\Services\LunoService;
+use App\Http\Controllers\DashboardController;
 
 // PUBLIC ROUTE (Landing Page)
 Route::get('/', function () {
@@ -20,19 +22,15 @@ Route::middleware([
     config('jetstream.auth_session'),
     'verified',
 ])->group(function () {
-    
-    // 1. SMART DASHBOARD REDIRECT
-    Route::get('/dashboard', function () {
-        if (auth()->user()->is_admin) {
-            return redirect()->route('admin.dashboard');
-        }
-        return Inertia::render('Dashboard');
-    })->name('dashboard');
 
+    // 1. SMART DASHBOARD REDIRECT
+    Route::get('/dashboard', [DashboardController::class, 'index'])
+    ->middleware(['auth'])
+    ->name('dashboard');
     // ==========================================
     //  ADMIN ROUTES
     // ==========================================
-    
+
     // A. System Health (Dashboard)
     Route::get('/admin/dashboard', function () {
         if (!auth()->user()->is_admin) abort(403, 'Unauthorized');
@@ -62,4 +60,15 @@ Route::middleware([
     Route::get('/settings', function () {
         return Inertia::render('Settings');
     })->name('settings');
+});
+
+Route::get('/sync-luno', function () {
+    $luno = new LunoService();
+    return $luno->syncPortfolio();
+})->middleware('auth');
+
+// TEST ROUTE FOR LUNO API
+Route::get('/test-luno', function () {
+    $luno = new LunoService();
+    return $luno->getProcessedBalances();
 });
