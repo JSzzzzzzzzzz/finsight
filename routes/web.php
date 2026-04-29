@@ -6,6 +6,8 @@ use Inertia\Inertia;
 use App\Services\LunoService;
 use App\Http\Controllers\DashboardController;
 
+
+
 // PUBLIC ROUTE (Landing Page)
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -25,8 +27,8 @@ Route::middleware([
 
     // 1. SMART DASHBOARD REDIRECT
     Route::get('/dashboard', [DashboardController::class, 'index'])
-    ->middleware(['auth'])
-    ->name('dashboard');
+        ->middleware(['auth'])
+        ->name('dashboard');
     // ==========================================
     //  ADMIN ROUTES
     // ==========================================
@@ -60,15 +62,14 @@ Route::middleware([
     Route::get('/settings', function () {
         return Inertia::render('Settings');
     })->name('settings');
+
+    Route::get('/sync-luno', function () {
+        $luno = new LunoService();
+
+        $luno->syncPortfolio();
+
+        return 'Luno fully synced';
+    })->name('sync.luno');
 });
 
-Route::get('/sync-luno', function () {
-    $luno = new LunoService();
-    return $luno->syncPortfolio();
-})->middleware('auth');
 
-// TEST ROUTE FOR LUNO API
-Route::get('/test-luno', function () {
-    $luno = new LunoService();
-    return $luno->getProcessedBalances();
-});

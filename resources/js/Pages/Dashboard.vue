@@ -10,7 +10,8 @@ const showRiskModal = ref(false);
 
 const props = defineProps({
     portfolios: Array,
-    cash: Number
+    cash: Number,
+    totalBalance: Number
 })
 
 const portfolio = {
@@ -21,13 +22,6 @@ const portfolio = {
     unrealized: '400.00',
     riskLevel: 'High',
 };
-
-// const assets = [
-//     { name: 'Bitcoin', symbol: 'BTC', amount: '0.25', price: '280,000', value: '70,000', change: '+1.2%' },
-//     { name: 'Ethereum', symbol: 'ETH', amount: '1.5', price: '12,000', value: '18,000', change: '-0.5%' },
-//     { name: 'Ripple', symbol: 'XRP', amount: '500', price: '2.50', value: '1,250', change: '+0.8%' },
-//     { name: 'Solana', symbol: 'SOL', amount: '120', price: '450.00', value: '54,000', change: '+4.5%' },
-// ];
 
 </script>
 
@@ -83,7 +77,7 @@ const portfolio = {
                                 <span
                                     class="block text-[10px] uppercase tracking-wide text-teal-200 opacity-90 mb-0.5">Unrealized</span>
                                 <span class="font-bold text-base lg:text-lg text-white">+{{ portfolio.unrealized
-                                    }}</span>
+                                }}</span>
                             </div>
                             <div class="text-right lg:text-left">
                                 <span
@@ -98,7 +92,8 @@ const portfolio = {
                         <div class="text-gray-400 font-bold uppercase tracking-wider text-[10px] lg:text-xs truncate">
                             Total
                             Balance</div>
-                        <div class="text-xl lg:text-3xl font-bold text-white mt-1 lg:mt-2 truncate">RM {{ props.cash }}
+                        <div class="text-xl lg:text-3xl font-bold text-white mt-1 lg:mt-2 truncate">RM {{
+                            props.totalBalance.toFixed(2) }}
                         </div>
                         <div class="text-[10px] lg:text-xs text-gray-500 mt-1 truncate">≈ $2,950.00 USD</div>
                     </div>
@@ -139,7 +134,7 @@ const portfolio = {
                                         Amount</th>
                                     <th
                                         class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                                        Price</th>
+                                        AVG Price</th>
                                     <th
                                         class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                                         24h Change</th>
@@ -148,6 +143,38 @@ const portfolio = {
                                         Value (RM)</th>
                                 </tr>
                             </thead>
+                            <!-- Fiat cash MYR from wallet -->
+                            <tr class="hover:bg-gray-700 transition">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div
+                                            class="h-8 w-8 rounded-full bg-yellow-500 flex items-center justify-center text-white font-bold text-xs mr-3">
+                                            M
+                                        </div>
+                                        <div>
+                                            <div class="text-sm font-bold text-white">Malaysian Ringgit</div>
+                                            <div class="text-sm text-gray-400">MYR</div>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                                    --
+                                </td>
+
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                                    --
+                                </td>
+
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                                    --
+                                </td>
+
+                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-white">
+                                    RM {{ props.cash.toFixed(2) }}
+                                </td>
+                            </tr>
+                            <!-- Crypto assets -->
                             <tbody class="bg-gray-800 divide-y divide-gray-700">
                                 <tr v-for="item in props.portfolios" :key="item.id"
                                     class="hover:bg-gray-700 transition">
@@ -173,19 +200,17 @@ const portfolio = {
                                         {{ item.amount }}
                                     </td>
 
-                                    <!-- price not implemented yet -->
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                                        RM --
+                                        RM {{ item.avg_buy_price ? item.avg_buy_price.toFixed(2) : '--' }}
                                     </td>
 
-                                    <!-- change not implemented -->
+                                    <!-- 24H change will be done later -->
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
                                         --
                                     </td>
 
-                                    <!-- value not implemented -->
                                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-white">
-                                        RM --
+                                        RM {{ item.value ? item.value.toFixed(2) : '--' }}
                                     </td>
                                 </tr>
                             </tbody>
