@@ -72,4 +72,10 @@ Route::middleware([
     })->name('sync.luno');
 });
 
+// Route::get('/test-hata', function () {
+//     return (new \App\Services\HataService())->getBalance();
+// });
 
+// Route::get('/test-hata-trades', function () {
+//     return (new \App\Services\HataService())->getTrades('BTCUSDT');
+// });
