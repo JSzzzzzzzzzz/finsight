@@ -13,54 +13,53 @@ use Inertia\Inertia;
 class DashboardController extends Controller
 {
     public function index()
-{
-    $portfolios = Portfolio::with('asset')
-        ->where('user_id', Auth::id())
-        ->get();
+    {
+        $portfolios = Portfolio::with('asset')
+            ->where('user_id', Auth::id())
+            ->get();
 
-    $luno = new LunoService();
-    $totalCrypto = 0;
+        $luno = new LunoService();
+        $totalCrypto = 0;
 
-    foreach ($portfolios as $portfolio) {
+        foreach ($portfolios as $portfolio) {
 
-        $symbol = $portfolio->asset->symbol;
+            $symbol = $portfolio->asset->symbol;
 
-        // convert symbol → pair
-        $pair = $symbol === 'BTC' ? 'XBTMYR' : $symbol . 'MYR';
+            // convert symbol → pair
+            $pair = $symbol === 'BTC' ? 'XBTMYR' : $symbol . 'MYR';
 
-        $ticker = $luno->getTicker($pair);
+            $ticker = $luno->getTicker($pair);
 
-        $price = (float) ($ticker['last_trade'] ?? 0);
+            $price = (float) ($ticker['last_trade'] ?? 0);
 
-        $value = $portfolio->amount * $price;
+            $value = $portfolio->amount * $price;
 
-        // attach for frontend
-        $portfolio->price = $price;
-        $portfolio->value = $value;
+            // attach for frontend
+            $portfolio->price = $price;
+            $portfolio->value = $value;
 
-        $totalCrypto += $value;
+            $totalCrypto += $value;
+        }
+
+        $cash = Wallet::where('user_id', Auth::id())
+            ->value('cash') ?? 0;
+
+        $totalBalance = $totalCrypto + (float) $cash;
+
+        $snapshots = PortfolioSnapshot::where('user_id', Auth::id())
+            ->orderBy('date', 'asc')
+            ->take(7)
+            ->get()
+            ->map(fn($s) => [
+                'date' => $s->date,
+                'value' => (float) $s->total_value
+            ]);
+
+        return Inertia::render('Dashboard', [
+            'portfolios' => $portfolios,
+            'cash' => (float) $cash,
+            'totalBalance' => $totalBalance,
+            'snapshots' => $snapshots
+        ]);
     }
-
-    $cash = Wallet::where('user_id', Auth::id())
-        ->value('cash') ?? 0;
-
-    $totalBalance = $totalCrypto + (float) $cash;
-
-    $snapshots = PortfolioSnapshot::where('user_id', Auth::id())
-    ->orderBy('created_at')
-    ->get()
-    ->map(function ($item) {
-        return [
-            'date' => $item->created_at->format('Y-m-d'),
-            'value' => (float) $item->total_value
-        ];
-    });
-
-    return Inertia::render('Dashboard', [
-        'portfolios' => $portfolios,
-        'cash' => (float) $cash,
-        'totalBalance' => $totalBalance,
-        'snapshots' => $snapshots
-    ]);
-}
 }

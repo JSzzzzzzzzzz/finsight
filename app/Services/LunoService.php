@@ -6,6 +6,7 @@ use App\Models\Asset;
 use App\Models\Portfolio;
 use App\Models\Wallet;
 use App\Models\PortfolioSnapshot;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 
@@ -107,10 +108,15 @@ class LunoService
         $totalValue += $data['cash_MYR'];
 
         // store snapshot
-        PortfolioSnapshot::create([
-            'user_id' => $userId,
-            'total_value' => $totalValue
-        ]);
+        PortfolioSnapshot::updateOrCreate(
+            [
+                'user_id' => $userId,
+                'date' => Carbon::now('Asia/Kuala_Lumpur')->toDateString()
+            ],
+            [
+                'total_value' => $totalValue
+            ]
+        );
 
         // update wallet (fiat)
         Wallet::updateOrCreate(

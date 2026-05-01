@@ -27,35 +27,23 @@ const props = defineProps({
   data: Array
 });
 
-// const data = {
-//   labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-//   datasets: [
-//     {
-//       label: 'Portfolio Value (RM)',
-//       backgroundColor: 'rgba(59, 130, 246, 0.2)', // Blue with transparency
-//       borderColor: '#3b82f6', // Solid Blue
-//       pointBackgroundColor: '#3b82f6',
-//       borderWidth: 2,
-//       fill: true, // Makes it look fancy
-//       tension: 0.4, // Makes lines smooth/curved
-//       data: [props.data.map(i => i.value)]
-//     }
-//   ]
-// }
-
 const chartData = {
   labels: props.data.map(i => i.date),
   datasets: [
     {
       label: 'Portfolio Value (RM)',
       data: props.data.map(i => i.value),
-      backgroundColor: 'rgba(59, 130, 246, 0.2)',
+
       borderColor: '#3b82f6',
-      pointBackgroundColor: '#3b82f6',
-      borderWidth: 2,
+      backgroundColor: 'rgba(59,130,246,0.15)',
+
       fill: true,
       tension: 0.4,
-      pointRadius: 5
+
+      pointRadius: 4,
+      pointHoverRadius: 6,
+
+      borderWidth: 2
     }
   ]
 };
@@ -72,12 +60,7 @@ const options = {
     y: {
       ticks: {
         color: '#9CA3AF',
-        font: {
-          size: 12
-        },
-        callback: function (value) {
-          return 'RM ' + value;
-        }
+        callback: value => 'RM ' + value.toFixed(2)
       },
       grid: {
         color: 'rgba(255,255,255,0.05)'
