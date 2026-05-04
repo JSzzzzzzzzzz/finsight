@@ -8,6 +8,12 @@ class PortfolioSnapshot extends Model
 {
     protected $fillable = [
         'user_id',
-        'total_value'
+        'date',
+        'total_value',
+    ];
+
+    protected $casts = [
+        'date' => 'date',
+        'total_value' => 'float',
     ];
 }

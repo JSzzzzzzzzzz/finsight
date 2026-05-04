@@ -2,9 +2,11 @@
 
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use App\Services\LunoService;
 use App\Http\Controllers\DashboardController;
+use App\Models\TradingPair;
 
 
 
@@ -35,21 +37,48 @@ Route::middleware([
 
     // A. System Health (Dashboard)
     Route::get('/admin/dashboard', function () {
-        if (!auth()->user()->is_admin) abort(403, 'Unauthorized');
+        if (!Auth::user()->is_admin) abort(403, 'Unauthorized');
         return Inertia::render('Admin/ADashboard');
     })->name('admin.dashboard');
 
     // B. Manage Users
     Route::get('/admin/users', function () {
-        if (!auth()->user()->is_admin) abort(403, 'Unauthorized');
+        if (!Auth::user()->is_admin) abort(403, 'Unauthorized');
         return Inertia::render('Admin/AUsers');
     })->name('admin.users');
 
     // C. Manage Pairs
     Route::get('/admin/pairs', function () {
-        if (!auth()->user()->is_admin) abort(403, 'Unauthorized');
-        return Inertia::render('Admin/APairs');
+        if (!Auth::user()->is_admin) abort(403, 'Unauthorized');
+
+        return Inertia::render('Admin/APairs', [
+            'pairs' => TradingPair::latest()->get()
+        ]);
     })->name('admin.pairs');
+
+    Route::post('/admin/pairs', function () {
+        if (!Auth::user()->is_admin) abort(403, 'Unauthorized');
+
+        request()->validate([
+            'symbol' => 'required|string|max:20|unique:trading_pairs,symbol'
+        ]);
+
+        TradingPair::create([
+            'symbol' => strtoupper(request('symbol')),
+            'source' => 'Luno',
+            'is_active' => true,
+        ]);
+
+        return back();
+    })->name('admin.pairs.store');
+
+    Route::delete('/admin/pairs/{pair}', function (TradingPair $pair) {
+        if (!Auth::user()->is_admin) abort(403, 'Unauthorized');
+
+        $pair->delete();
+
+        return back();
+    })->name('admin.pairs.destroy');
 
 
     // ==========================================
@@ -63,19 +92,10 @@ Route::middleware([
         return Inertia::render('Settings');
     })->name('settings');
 
-    Route::get('/sync-luno', function () {
-        $luno = new LunoService();
-
+    Route::post('/sync-luno', function () {
+        $luno = new \App\Services\LunoService();
         $luno->syncPortfolio();
 
-        return 'Luno fully synced';
-    })->name('sync.luno');
+        return redirect()->route('dashboard');
+    })->middleware('auth')->name('sync.luno');
 });
-
-// Route::get('/test-hata', function () {
-//     return (new \App\Services\HataService())->getBalance();
-// });
-
-// Route::get('/test-hata-trades', function () {
-//     return (new \App\Services\HataService())->getTrades('BTCUSDT');
-// });

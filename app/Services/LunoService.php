@@ -99,6 +99,8 @@ class LunoService
 
             $pair = $symbol === 'BTC' ? 'XBTMYR' : $symbol . 'MYR';
             $ticker = $this->getTicker($pair);
+            
+            if (!isset($ticker['last_trade'])) continue;
             $price = (float) ($ticker['last_trade'] ?? 0);
 
             $totalValue += $amount * $price;
@@ -111,10 +113,10 @@ class LunoService
         PortfolioSnapshot::updateOrCreate(
             [
                 'user_id' => $userId,
-                'date' => Carbon::now('Asia/Kuala_Lumpur')->toDateString()
+                'date' => Carbon::today('Asia/Kuala_Lumpur')->toDateString()
             ],
             [
-                'total_value' => $totalValue
+                'total_value' => round($totalValue, 2)
             ]
         );
 

@@ -4,15 +4,22 @@ import PortfolioChart from '@/Components/PortfolioChart.vue';
 import LeaderboardModal from '@/Components/LeaderboardModal.vue';
 import RiskModal from '@/Components/RiskModal.vue';
 import { ref } from 'vue';
+import { router } from '@inertiajs/vue3';
 
 const showLeaderboard = ref(false);
 const showRiskModal = ref(false);
+
+const syncLuno = () => {
+    router.post(route('sync.luno'));
+};
 
 const props = defineProps({
     portfolios: Array,
     cash: Number,
     totalBalance: Number,
-    snapshots: Array
+    snapshots: Array,
+    percentChange: Number,
+    changeAmount: Number
 });
 
 </script>
@@ -25,7 +32,6 @@ const props = defineProps({
                     class="font-bold text-lg md:text-xl text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-cyan-400">
                     My Portfolio Dashboard
                 </h2>
-
                 <div class="flex space-x-2 md:space-x-4">
                     <button @click="showRiskModal = true"
                         class="px-3 py-2 bg-red-600 rounded-md text-white text-xs font-bold hover:bg-red-500">
@@ -36,38 +42,84 @@ const props = defineProps({
                         class="px-3 py-2 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-md text-white text-xs font-bold hover:from-teal-600 hover:to-cyan-600">
                         Leaderboard
                     </button>
+
+                    <button @click="syncLuno"
+                        class="px-3 py-2 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-md text-white text-xs font-bold hover:from-teal-600 hover:to-cyan-600">
+                        Sync Portfolio
+                    </button>
                 </div>
             </div>
         </template>
 
-        <div class="py-8">
+        <div class="py-8 overflow-hidden">
             <div class="max-w-7xl mx-auto px-4 space-y-6">
                 <!-- TOP CARDS -->
-                <div class="grid grid-cols-2 gap-6">
+                <div class="overflow-x-auto lg:overflow-visible pb-2">
+                    <div
+                        class="flex lg:grid lg:grid-cols-[2fr_1fr] lg:grid-rows-2 gap-4 lg:gap-6 w-max lg:w-auto snap-x snap-mandatory">
 
-                    <!-- TOTAL PORTFOLIO VALUE -->
-                    <div class="bg-gray-800 rounded-xl p-5 border-l-4 border-teal-500">
-                        <div class="text-gray-400 text-xs uppercase">
-                            Total Portfolio Value
+                        <!-- LEFT BIG PORTFOLIO CHANGE CARD -->
+                        <div
+                            class="snap-start w-[320px] lg:w-auto lg:row-span-2 bg-gradient-to-br from-teal-700 via-cyan-600 to-teal-400 rounded-xl p-5 text-white shadow-xl flex flex-col justify-between min-h-[190px] lg:min-h-[240px]">
+                            <div>
+                                <div class="text-teal-100 font-bold uppercase tracking-wider text-xs mb-1">
+                                    Portfolio Change
+                                </div>
+
+                                <div class="text-4xl lg:text-5xl font-extrabold text-white mt-2 mb-2">
+                                    {{ props.changeAmount >= 0 ? '+' : '-' }} RM {{
+                                        Math.abs(props.changeAmount).toFixed(2) }}
+                                </div>
+
+                                <div class="flex items-center text-sm lg:text-base font-bold"
+                                    :class="props.percentChange >= 0 ? 'text-green-100' : 'text-red-100'">
+                                    <span class="mr-1">
+                                        {{ props.percentChange >= 0 ? '↑' : '↓' }}
+                                    </span>
+                                    {{ Math.abs(props.percentChange).toFixed(2) }}% since previous snapshot
+                                </div>
+                            </div>
+
+                            <div class="border-t border-teal-400/30 pt-3 mt-4">
+                                <span class="block text-[10px] uppercase tracking-wide text-teal-100 opacity-90">
+                                    Insight
+                                </span>
+                                <span class="font-bold text-sm text-white">
+                                    Based on daily portfolio value snapshots.
+                                </span>
+                            </div>
                         </div>
-                        <div class="text-3xl font-bold text-white mt-2">
-                            RM {{ props.totalBalance.toFixed(2) }}
+
+                        <!-- RIGHT TOP CARD -->
+                        <div
+                            class="snap-start w-[320px] lg:w-auto bg-gray-800 rounded-xl p-5 border-l-4 border-teal-500 shadow-xl flex flex-col justify-center min-h-[115px]">
+                            <div class="text-gray-400 text-xs uppercase">
+                                Total Portfolio Value
+                            </div>
+
+                            <div class="text-3xl font-bold text-white mt-2">
+                                RM {{ props.totalBalance.toFixed(2) }}
+                            </div>
                         </div>
+
+                        <!-- RIGHT BOTTOM CARD -->
+                        <div
+                            class="snap-start w-[320px] lg:w-auto bg-gray-800 rounded-xl p-5 border-l-4 border-red-500 shadow-xl flex flex-col justify-center min-h-[115px]">
+                            <div class="text-gray-400 text-xs uppercase">
+                                Risk Level
+                            </div>
+
+                            <div class="text-3xl font-bold text-r
+                            ed-400 mt-2">
+                                High
+                            </div>
+
+                            <div class="text-xs text-red-400 mt-2">
+                                ⚠️ Volatility Alert
+                            </div>
+                        </div>
+
                     </div>
-
-                    <!-- RISK -->
-                    <div class="bg-gray-800 rounded-xl p-5 border-l-4 border-red-500">
-                        <div class="text-gray-400 text-xs uppercase">
-                            Risk Level
-                        </div>
-                        <div class="text-3xl font-bold text-red-400 mt-2">
-                            High
-                        </div>
-                        <div class="text-xs text-red-400 mt-1">
-                            ⚠️ Volatility Alert
-                        </div>
-                    </div>
-
                 </div>
 
                 <!-- CHART -->

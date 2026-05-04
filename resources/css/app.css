@@ -5,3 +5,14 @@
 [x-cloak] {
     display: none;
 }
+
+html,
+body {
+    overflow-x: hidden;
+    max-width: 100%;
+}
+
+#app {
+    overflow-x: hidden;
+    max-width: 100%;
+}
