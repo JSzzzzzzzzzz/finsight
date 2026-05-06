@@ -13,6 +13,10 @@ class DashboardController extends Controller
 {
     public function index()
     {
+        if (Auth::user()->is_admin) {
+            return redirect()->route('admin.dashboard');
+        }
+        
         $portfolios = Portfolio::with('asset')
             ->where('user_id', Auth::id())
             ->get();

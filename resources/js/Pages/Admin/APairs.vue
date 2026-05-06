@@ -10,6 +10,18 @@ const form = useForm({
     symbol: ''
 });
 
+const importLunoPairs = () => {
+    router.post(route('admin.pairs.import-luno'), {}, {
+        preserveScroll: true
+    });
+};
+
+const togglePair = (id) => {
+    router.patch(route('admin.pairs.toggle', id), {}, {
+        preserveScroll: true
+    });
+};
+
 const addPair = () => {
     if (!form.symbol) return;
 
@@ -41,20 +53,22 @@ const removePair = (id) => {
         <div class="py-12">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
 
-                <!-- ADD PAIR -->
+                <!-- IMPORT LUNO PAIRS -->
                 <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
-                    <div class="flex flex-col md:flex-row gap-4">
-                        <input v-model="form.symbol" type="text" placeholder="e.g. BTCMYR"
-                            class="flex-1 bg-gray-900 border border-gray-600 text-white rounded-lg p-3 uppercase">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div>
+                            <h3 class="text-white font-bold text-lg">
+                                Import Exchange Trading Pairs
+                            </h3>
+                            <p class="text-gray-400 text-sm mt-1">
+                                 Existing pairs will be skipped.
+                            </p>
+                        </div>
 
-                        <button @click="addPair" :disabled="form.processing"
-                            class="bg-teal-500 hover:bg-teal-400 disabled:opacity-50 text-white font-bold px-6 py-3 rounded-lg transition">
-                            + Add Pair
+                        <button @click="importLunoPairs"
+                            class="bg-teal-500 hover:bg-teal-400 text-white font-bold px-6 py-3 rounded-lg transition">
+                            Import Pairs
                         </button>
-                    </div>
-
-                    <div v-if="form.errors.symbol" class="text-red-400 text-sm mt-3">
-                        {{ form.errors.symbol }}
                     </div>
                 </div>
 
@@ -89,13 +103,19 @@ const removePair = (id) => {
                                 </td>
 
                                 <td class="px-6 py-4">
-                                    <span
-                                        class="px-3 py-1 rounded-full text-xs font-bold bg-teal-500/10 text-teal-400 border border-teal-500/30">
+                                    <span class="px-3 py-1 rounded-full text-xs font-bold border" :class="pair.is_active
+                                        ? 'bg-teal-500/10 text-teal-400 border-teal-500/30'
+                                        : 'bg-red-500/10 text-red-400 border-red-500/30'">
                                         {{ pair.is_active ? 'Active' : 'Inactive' }}
                                     </span>
                                 </td>
 
-                                <td class="px-6 py-4 text-right">
+                                <td class="px-6 py-4 text-right space-x-4">
+                                    <button @click="togglePair(pair.id)"
+                                        class="text-yellow-400 hover:text-yellow-300 font-bold text-xs uppercase">
+                                        {{ pair.is_active ? 'Deactivate' : 'Activate' }}
+                                    </button>
+
                                     <button @click="removePair(pair.id)"
                                         class="text-red-400 hover:text-red-300 font-bold text-xs uppercase">
                                         Remove

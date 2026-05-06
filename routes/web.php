@@ -7,6 +7,7 @@ use Inertia\Inertia;
 use App\Services\LunoService;
 use App\Http\Controllers\DashboardController;
 use App\Models\TradingPair;
+use App\Models\UserTradingPair;
 
 
 
@@ -80,6 +81,52 @@ Route::middleware([
         return back();
     })->name('admin.pairs.destroy');
 
+    Route::post('/admin/pairs/import-luno', function () {
+        if (!Auth::user()->is_admin) abort(403, 'Unauthorized');
+
+        $luno = new LunoService();
+        $data = $luno->getMarkets();
+
+        $topPairs = [
+            'XBTMYR',
+            'ETHMYR',
+            'XRPMYR',
+            'SOLMYR',
+            'ADAMYR',
+            'LINKMYR',
+            'AVAXMYR',
+            'BCHMYR',
+            'LTCMYR',
+            'UNIMYR',
+        ];
+
+        $markets = collect($data['markets'] ?? [])
+            ->filter(fn($market) => in_array($market['market_id'], $topPairs))
+            ->sortBy(fn($market) => array_search($market['market_id'], $topPairs));
+
+        foreach ($markets as $market) {
+            TradingPair::firstOrCreate(
+                ['symbol' => $market['market_id']],
+                [
+                    'source' => 'Luno',
+                    'is_active' => true,
+                ]
+            );
+        }
+
+        return back();
+    })->name('admin.pairs.import-luno');
+
+    Route::patch('/admin/pairs/{pair}/toggle', function (TradingPair $pair) {
+        if (!Auth::user()->is_admin) abort(403, 'Unauthorized');
+
+        $pair->update([
+            'is_active' => !$pair->is_active
+        ]);
+
+        return back();
+    })->name('admin.pairs.toggle');
+
 
     // ==========================================
     //  USER ROUTES
@@ -89,10 +136,59 @@ Route::middleware([
     })->name('market');
 
     Route::get('/settings', function () {
-        return Inertia::render('Settings');
+        if (Auth::user()->is_admin) abort(403, 'Unauthorized');
+
+        $selectedPairIds = UserTradingPair::where('user_id', Auth::id())
+            ->pluck('trading_pair_id')
+            ->toArray();
+
+        return Inertia::render('Settings', [
+            'availablePairs' => TradingPair::where('is_active', true)
+                ->whereNotIn('id', $selectedPairIds)
+                ->orderBy('symbol')
+                ->get(),
+
+            'selectedPairs' => UserTradingPair::with('tradingPair')
+                ->where('user_id', Auth::id())
+                ->join('trading_pairs', 'user_trading_pairs.trading_pair_id', '=', 'trading_pairs.id')
+                ->orderBy('trading_pairs.symbol', 'asc')
+                ->select('user_trading_pairs.*')
+                ->get(),
+
+            'selectedPairIds' => $selectedPairIds,
+        ]);
     })->name('settings');
 
+    Route::post('/settings/pairs', function () {
+        if (Auth::user()->is_admin) abort(403, 'Unauthorized');
+
+        request()->validate([
+            'trading_pair_id' => 'required|exists:trading_pairs,id',
+        ]);
+
+        UserTradingPair::firstOrCreate([
+            'user_id' => Auth::id(),
+            'trading_pair_id' => request('trading_pair_id'),
+        ]);
+
+        return back();
+    })->name('settings.pairs.store');
+
+    Route::delete('/settings/pairs/{userTradingPair}', function (UserTradingPair $userTradingPair) {
+        if (Auth::user()->is_admin) abort(403, 'Unauthorized');
+
+        if ($userTradingPair->user_id !== Auth::id()) {
+            abort(403, 'Unauthorized');
+        }
+
+        $userTradingPair->delete();
+
+        return back();
+    })->name('settings.pairs.destroy');
+
     Route::post('/sync-luno', function () {
+        if (Auth::user()->is_admin) abort(403, 'Admin cannot sync portfolio.');
+
         $luno = new \App\Services\LunoService();
         $luno->syncPortfolio();
 

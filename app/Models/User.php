@@ -70,4 +70,9 @@ class User extends Authenticatable
     {
         return $this->belongsTo(User::class);
     }
+
+    public function userTradingPairs()
+    {
+        return $this->hasMany(\App\Models\UserTradingPair::class);
+    }
 }
