@@ -37,6 +37,15 @@ const handleApiSave = (maskedKey) => {
     savedApiKey.value = maskedKey;
     alert("Success! Keys encrypted and saved.");
 };
+
+const displayPair = (symbol) => {
+    return symbol === 'XBTMYR' ? 'BTCMYR' : symbol;
+};
+
+const displaySymbolInitial = (symbol) => {
+    return symbol === 'XBTMYR' ? 'B' : symbol.substring(0, 1);
+};
+
 </script>
 
 <template>
@@ -111,12 +120,11 @@ const handleApiSave = (maskedKey) => {
                                         <div class="flex items-center">
                                             <div
                                                 class="h-10 w-10 rounded-xl bg-gray-800 border border-gray-700 flex items-center justify-center text-teal-400 font-bold text-sm mr-4">
-                                                {{ item.trading_pair.symbol.substring(0, 1) }}
+                                               {{ displaySymbolInitial(item.trading_pair.symbol) }}
                                             </div>
                                             <div>
                                                 <div class="text-base font-bold text-white">
-                                                    {{ item.trading_pair.symbol }}
-                                                </div>
+                                                    {{ displayPair(item.trading_pair.symbol) }} </div>
                                                 <div class="text-xs text-gray-500 md:hidden mt-1">
                                                     {{ item.trading_pair.source }}
                                                 </div>

@@ -8,17 +8,11 @@ const showAnalysis = ref(false);
 const showMobileChart = ref(false);
 const selectedCoin = ref(null);
 
-// FAKE MARKET DATA
-const marketData = ref([
-    { rank: 1, name: 'Bitcoin', symbol: 'BTC', price: '68,450.00', change: '+2.4%', marketCap: '1.2T' },
-    { rank: 2, name: 'Ethereum', symbol: 'ETH', price: '3,890.00', change: '-1.2%', marketCap: '450B' },
-    { rank: 3, name: 'Solana', symbol: 'SOL', price: '145.20', change: '+8.5%', marketCap: '85B' },
-    { rank: 4, name: 'Binance Coin', symbol: 'BNB', price: '590.00', change: '+0.5%', marketCap: '80B' },
-    { rank: 5, name: 'Ripple', symbol: 'XRP', price: '0.62', change: '-0.8%', marketCap: '34B' },
-    { rank: 6, name: 'Cardano', symbol: 'ADA', price: '0.45', change: '-1.5%', marketCap: '16B' },
-    { rank: 7, name: 'Dogecoin', symbol: 'DOGE', price: '0.12', change: '+12.5%', marketCap: '18B' },
-    { rank: 8, name: 'Polkadot', symbol: 'DOT', price: '7.20', change: '-0.5%', marketCap: '10B' },
-]);
+const props = defineProps({
+    marketData: Array
+});
+
+const marketData = ref(props.marketData ?? []);
 
 const aiSummary = {
     sentiment: 'Bearish',
@@ -32,7 +26,11 @@ const analyzeCoin = (coin) => {
 };
 
 const openChart = (coin) => {
-    selectedCoin.value = coin;
+    selectedCoin.value = {
+        ...coin,
+        tvSymbol: coin.symbol
+    };
+
     showMobileChart.value = true;
 };
 
@@ -76,7 +74,7 @@ onMounted(() => {
                                 class="text-gray-400 font-bold uppercase text-[10px] lg:text-xs tracking-wider mb-1 lg:mb-2">
                                 Market Sentiment</h3>
                             <span class="text-2xl lg:text-4xl font-black text-red-500 block">{{ aiSummary.sentiment
-                            }}</span>
+                                }}</span>
                         </div>
 
                         <div class="text-right lg:text-left lg:mt-4 w-1/2 lg:w-full">
@@ -152,20 +150,18 @@ onMounted(() => {
                                             @click="openChart(coin)">
                                             <div class="flex items-center">
                                                 <div class="font-bold text-white text-sm mr-2">{{ coin.symbol }}</div>
-                                                <div class="text-xs hidden sm:block"
-                                                    :class="coin.change.includes('+') ? 'text-emerald-400' : 'text-red-400'">
-                                                    {{ coin.change }}
+                                                <div class="text-xs hidden sm:block text-teal-400">
+                                                    {{ coin.display_pair }}
                                                 </div>
                                             </div>
-                                            <div class="text-xs sm:hidden mt-1"
-                                                :class="coin.change.includes('+') ? 'text-emerald-400' : 'text-red-400'">
-                                                {{ coin.change }}
+                                            <div class="text-xs sm:hidden mt-1 text-teal-400">
+                                                {{ coin.display_pair }}
                                             </div>
                                         </td>
 
                                         <td
                                             class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium text-gray-200">
-                                            ${{ coin.price }}
+                                            RM {{ Number(coin.price).toFixed(2) }}
                                         </td>
 
                                         <td class="px-4 py-3 whitespace-nowrap text-right">
@@ -197,8 +193,7 @@ onMounted(() => {
         </div>
 
         <CoinAnalysisModal :show="showAnalysis" :coin="selectedCoin" @close="showAnalysis = false" />
-        <MobileChartModal :show="showMobileChart" :symbol="selectedCoin?.symbol" @close="showMobileChart = false" />
-
+        <MobileChartModal :show="showMobileChart" :symbol="selectedCoin?.tvSymbol" @close="showMobileChart = false" />
     </AppLayout>
 </template>
 

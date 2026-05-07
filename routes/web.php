@@ -132,7 +132,37 @@ Route::middleware([
     //  USER ROUTES
     // ==========================================
     Route::get('/market', function () {
-        return Inertia::render('Market');
+        if (Auth::user()->is_admin) abort(403, 'Unauthorized');
+
+        $luno = new LunoService();
+
+        $selectedPairs = UserTradingPair::with('tradingPair')
+            ->where('user_id', Auth::id())
+            ->get();
+
+        $marketData = $selectedPairs->map(function ($item) use ($luno) {
+            $pair = $item->tradingPair->symbol;
+            $ticker = $luno->getTicker($pair);
+
+            return [
+                'id' => $item->id,
+                'pair' => $pair,
+                'symbol' => $pair === 'XBTMYR'
+                    ? 'BTC'
+                    : str_replace('MYR', '', $pair),
+                'display_pair' => $pair === 'XBTMYR'
+                    ? 'BTCMYR'
+                    : $pair,
+                'source' => $item->tradingPair->source,
+                'price' => (float) ($ticker['last_trade'] ?? 0),
+                'bid' => (float) ($ticker['bid'] ?? 0),
+                'ask' => (float) ($ticker['ask'] ?? 0),
+            ];
+        });
+
+        return Inertia::render('Market', [
+            'marketData' => $marketData,
+        ]);
     })->name('market');
 
     Route::get('/settings', function () {

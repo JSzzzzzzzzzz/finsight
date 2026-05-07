@@ -40,6 +40,14 @@ const removePair = (id) => {
         preserveScroll: true
     });
 };
+
+const displayPair = (symbol) => {
+    return symbol === 'XBTMYR' ? 'BTCMYR' : symbol;
+};
+
+const displaySymbolInitial = (symbol) => {
+    return symbol === 'XBTMYR' ? 'B' : symbol.substring(0, 1);
+};
 </script>
 
 <template>
@@ -95,7 +103,7 @@ const removePair = (id) => {
                         <tbody class="divide-y divide-gray-700">
                             <tr v-for="pair in props.pairs" :key="pair.id">
                                 <td class="px-6 py-4 font-bold text-white">
-                                    {{ pair.symbol }}
+                                   {{ displayPair(pair.symbol) }}
                                 </td>
 
                                 <td class="px-6 py-4 text-gray-400 text-sm">
