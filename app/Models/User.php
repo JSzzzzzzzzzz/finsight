@@ -29,6 +29,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'status',
     ];
 
     /**
@@ -74,5 +75,10 @@ class User extends Authenticatable
     public function userTradingPairs()
     {
         return $this->hasMany(\App\Models\UserTradingPair::class);
+    }
+
+    public function apiKeys()
+    {
+        return $this->hasMany(\App\Models\ApiKey::class);
     }
 }

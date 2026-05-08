@@ -1,40 +1,42 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { ref, computed } from 'vue';
+import { router } from '@inertiajs/vue3';
+
+const props = defineProps({
+    users: Array,
+});
 
 const searchQuery = ref('');
 
-// 1. DATA: "Active" or "Banned" only
-const users = ref([
-    { id: 1, name: 'Alice Johnson', email: 'alice@example.com', role: 'User', status: 'Active', joined: '2 days ago' },
-    { id: 2, name: 'Bob Smith', email: 'bob@trader.com', role: 'User', status: 'Banned', joined: '1 week ago' },
-    { id: 3, name: 'Charlie Dave', email: 'charlie@crypto.net', role: 'User', status: 'Active', joined: '3 weeks ago' },
-    { id: 4, name: 'Diana Prince', email: 'diana@fintech.io', role: 'User', status: 'Active', joined: '1 month ago' },
-    { id: 5, name: 'Eve Hacker', email: 'eve@malicious.com', role: 'User', status: 'Banned', joined: '2 months ago' },
-]);
-
 const filteredUsers = computed(() => {
-    if (!searchQuery.value) return users.value;
+    if (!searchQuery.value) return props.users;
+
     const lower = searchQuery.value.toLowerCase();
-    return users.value.filter(u => 
-        u.name.toLowerCase().includes(lower) || 
+
+    return props.users.filter(u =>
+        u.name.toLowerCase().includes(lower) ||
         u.email.toLowerCase().includes(lower)
     );
 });
 
 const toggleBan = (user) => {
     if (user.status === 'Active') {
-        if(confirm(`Are you sure you want to BAN ${user.name}? They will lose access immediately.`)) {
-            user.status = 'Banned';
+        if (!confirm(`Are you sure you want to BAN ${user.name}? They will lose access immediately.`)) {
+            return;
         }
-    } else {
-        user.status = 'Active';
     }
+
+    router.patch(route('admin.users.toggle-status', user.id), {}, {
+        preserveScroll: true
+    });
 };
 
-// 2. STYLING
 const getStatusClasses = (status) => {
-    if (status === 'Active') return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-emerald-500/10';
+    if (status === 'Active') {
+        return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-emerald-500/10';
+    }
+
     return 'bg-red-500/10 text-red-400 border-red-500/20 shadow-red-500/10';
 };
 
@@ -66,7 +68,7 @@ const getStatusDot = (status) => {
                             </div>
                             <div class="flex flex-col">
                                 <span class="text-xs text-gray-500 uppercase tracking-wider font-bold">Total Users</span>
-                                <span class="text-white font-bold text-lg">{{ users.length }}</span>
+                                <span class="text-white font-bold text-lg">{{ props.users.length }}</span>
                             </div>
                         </div>
 

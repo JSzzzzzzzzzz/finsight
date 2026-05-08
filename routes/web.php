@@ -3,12 +3,14 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Crypt;
 use Inertia\Inertia;
 use App\Services\LunoService;
 use App\Http\Controllers\DashboardController;
 use App\Models\TradingPair;
 use App\Models\UserTradingPair;
-
+use App\Models\ApiKey;
+use App\Models\User;
 
 
 // PUBLIC ROUTE (Landing Page)
@@ -26,6 +28,7 @@ Route::middleware([
     'auth:sanctum',
     config('jetstream.auth_session'),
     'verified',
+    'user.status',
 ])->group(function () {
 
     // 1. SMART DASHBOARD REDIRECT
@@ -45,8 +48,35 @@ Route::middleware([
     // B. Manage Users
     Route::get('/admin/users', function () {
         if (!Auth::user()->is_admin) abort(403, 'Unauthorized');
-        return Inertia::render('Admin/AUsers');
+
+        return Inertia::render('Admin/AUsers', [
+            'users' => User::where('is_admin', false)
+                ->latest()
+                ->get()
+                ->map(fn($user) => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'role' => $user->is_admin ? 'Admin' : 'User',
+                    'status' => ucfirst($user->status ?? 'active'),
+                    'joined' => $user->created_at->diffForHumans(),
+                ]),
+        ]);
     })->name('admin.users');
+
+    Route::patch('/admin/users/{user}/toggle-status', function (User $user) {
+        if (!Auth::user()->is_admin) abort(403, 'Unauthorized');
+
+        if ($user->is_admin) {
+            abort(403, 'Admin account cannot be banned.');
+        }
+
+        $user->update([
+            'status' => $user->status === 'banned' ? 'active' : 'banned',
+        ]);
+
+        return back();
+    })->name('admin.users.toggle-status');
 
     // C. Manage Pairs
     Route::get('/admin/pairs', function () {
@@ -165,12 +195,50 @@ Route::middleware([
         ]);
     })->name('market');
 
+    Route::get('/market/scanner', function () {
+        if (Auth::user()->is_admin) abort(403, 'Unauthorized');
+
+        $luno = new LunoService();
+
+        $selectedPairs = UserTradingPair::with('tradingPair')
+            ->where('user_id', Auth::id())
+            ->get();
+
+        $tickersData = $luno->getAllTickers();
+
+        $tickers = collect($tickersData['tickers'] ?? []);
+
+        $marketData = $selectedPairs->map(function ($item) use ($tickers) {
+            $pair = $item->tradingPair->symbol;
+
+            $ticker = $tickers->firstWhere('pair', $pair);
+
+            return [
+                'id' => $item->id,
+                'pair' => $pair,
+                'display_pair' => $pair === 'XBTMYR' ? 'BTCMYR' : $pair,
+                'symbol' => $pair === 'XBTMYR'
+                    ? 'BTC'
+                    : str_replace('MYR', '', $pair),
+                'source' => $item->tradingPair->source,
+                'price' => (float) ($ticker['last_trade'] ?? 0),
+                'bid' => (float) ($ticker['bid'] ?? 0),
+                'ask' => (float) ($ticker['ask'] ?? 0),
+            ];
+        });
+
+        return response()->json($marketData);
+    })->name('market.scanner');
+
     Route::get('/settings', function () {
         if (Auth::user()->is_admin) abort(403, 'Unauthorized');
 
         $selectedPairIds = UserTradingPair::where('user_id', Auth::id())
             ->pluck('trading_pair_id')
             ->toArray();
+        $hasApiKey = ApiKey::where('user_id', Auth::id())
+            ->where('exchange', 'Luno')
+            ->exists();
 
         return Inertia::render('Settings', [
             'availablePairs' => TradingPair::where('is_active', true)
@@ -186,6 +254,8 @@ Route::middleware([
                 ->get(),
 
             'selectedPairIds' => $selectedPairIds,
+
+            'hasApiKey' => $hasApiKey,
         ]);
     })->name('settings');
 
@@ -216,12 +286,40 @@ Route::middleware([
         return back();
     })->name('settings.pairs.destroy');
 
+    Route::post('/settings/api-key', function () {
+        if (Auth::user()->is_admin) abort(403, 'Unauthorized');
+
+        request()->validate([
+            'api_key' => 'required|string',
+            'api_secret' => 'required|string',
+        ]);
+
+        ApiKey::updateOrCreate(
+            [
+                'user_id' => Auth::id(),
+                'exchange' => 'Luno',
+            ],
+            [
+                'api_key' => Crypt::encryptString(request('api_key')),
+                'api_secret' => Crypt::encryptString(request('api_secret')),
+            ]
+        );
+
+        return back();
+    })->name('settings.api-key.store');
+
     Route::post('/sync-luno', function () {
         if (Auth::user()->is_admin) abort(403, 'Admin cannot sync portfolio.');
 
-        $luno = new \App\Services\LunoService();
-        $luno->syncPortfolio();
+        try {
+            $luno = new LunoService();
+            $luno->syncPortfolio();
 
-        return redirect()->route('dashboard');
+            return redirect()->route('dashboard')
+                ->with('success', 'Portfolio synced successfully.');
+        } catch (\Exception $e) {
+            return redirect()->route('dashboard')
+                ->with('error', $e->getMessage());
+        }
     })->middleware('auth')->name('sync.luno');
 });

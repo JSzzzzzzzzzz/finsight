@@ -8,6 +8,7 @@ const props = defineProps({
     availablePairs: Array,
     selectedPairs: Array,
     selectedPairIds: Array,
+    hasApiKey: Boolean,
 });
 
 const showApiModal = ref(false);
@@ -58,9 +59,11 @@ const displaySymbolInitial = (symbol) => {
                     System Configuration
                 </h2>
 
-                <button @click="showApiModal = !showApiModal"
-                    class="w-auto inline-flex justify-center items-center px-4 py-2 md:px-6 md:py-3 bg-gradient-to-r from-teal-500 to-cyan-600 border border-transparent rounded-lg font-bold text-[10px] md:text-xs text-white uppercase tracking-widest hover:from-teal-600 hover:to-cyan-700 active:scale-95 focus:outline-none transition shadow-lg hover:shadow-teal-500/30 whitespace-nowrap">
-                    API Connection
+                <button @click="showApiModal = !showApiModal" :class="props.hasApiKey
+                    ? 'bg-emerald-600 hover:bg-emerald-500'
+                    : 'bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700'"
+                    class="w-auto inline-flex justify-center items-center px-4 py-2 md:px-6 md:py-3 border border-transparent rounded-lg font-bold text-[10px] md:text-xs text-white uppercase tracking-widest active:scale-95 focus:outline-none transition shadow-lg hover:shadow-teal-500/30 whitespace-nowrap">
+                    {{ props.hasApiKey ? 'Exchange Connected' : 'API Connection' }}
                 </button>
 
                 <ApiModal :show="showApiModal" :existingApiKey="savedApiKey" @close="showApiModal = false"
@@ -120,7 +123,7 @@ const displaySymbolInitial = (symbol) => {
                                         <div class="flex items-center">
                                             <div
                                                 class="h-10 w-10 rounded-xl bg-gray-800 border border-gray-700 flex items-center justify-center text-teal-400 font-bold text-sm mr-4">
-                                               {{ displaySymbolInitial(item.trading_pair.symbol) }}
+                                                {{ displaySymbolInitial(item.trading_pair.symbol) }}
                                             </div>
                                             <div>
                                                 <div class="text-base font-bold text-white">

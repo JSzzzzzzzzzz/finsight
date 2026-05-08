@@ -2,11 +2,42 @@
 import AppLayout from '@/Layouts/AppLayout.vue';
 import CoinAnalysisModal from '@/Components/CoinAnalysisModal.vue';
 import MobileChartModal from '@/Components/MobileChartModal.vue';
-import { onMounted, ref } from 'vue';
-
+import { onMounted, onUnmounted, ref } from 'vue';
 const showAnalysis = ref(false);
 const showMobileChart = ref(false);
 const selectedCoin = ref(null);
+
+
+let scannerInterval = null;
+
+const lastUpdated = ref(null);
+
+const fetchScannerData = async () => {
+    try {
+        console.log('Refreshing market scanner...');
+
+        const response = await fetch(route('market.scanner') + '?t=' + Date.now(), {
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            console.error('Scanner API error:', response.status);
+            return;
+        }
+
+        const data = await response.json();
+
+        console.log('Updated market data:', data);
+
+        marketData.value = [...data];
+        lastUpdated.value = new Date().toLocaleTimeString();
+
+    } catch (error) {
+        console.error('Failed to refresh market scanner:', error);
+    }
+};
 
 const props = defineProps({
     marketData: Array
@@ -35,26 +66,40 @@ const openChart = (coin) => {
 };
 
 onMounted(() => {
+    // Load TradingView chart
     const script = document.createElement('script');
     script.src = 'https://s3.tradingview.com/tv.js';
     script.async = true;
     script.onload = () => {
         new TradingView.widget({
-            "width": "100%",
-            "height": "100%",
-            "symbol": "BINANCE:BTCUSDT",
-            "interval": "D",
-            "timezone": "Etc/UTC",
-            "theme": "dark",
-            "style": "1",
-            "locale": "en",
-            "toolbar_bg": "#1f2937",
-            "enable_publishing": false,
-            "allow_symbol_change": true,
-            "container_id": "tradingview_chart"
+            width: "100%",
+            height: "100%",
+            symbol: "BINANCE:BTCUSDT",
+            interval: "D",
+            timezone: "Etc/UTC",
+            theme: "dark",
+            style: "1",
+            locale: "en",
+            toolbar_bg: "#1f2937",
+            enable_publishing: false,
+            allow_symbol_change: true,
+            container_id: "tradingview_chart"
         });
     };
     document.head.appendChild(script);
+
+    // Refresh market scanner every 3 seconds
+    fetchScannerData();
+
+    scannerInterval = setInterval(() => {
+        fetchScannerData();
+    }, 3000);
+});
+
+onUnmounted(() => {
+    if (scannerInterval) {
+        clearInterval(scannerInterval);
+    }
 });
 </script>
 
@@ -127,7 +172,9 @@ onMounted(() => {
                         <div
                             class="p-4 bg-gray-900 border-b border-gray-700 flex justify-between items-center shrink-0">
                             <h3 class="font-bold text-white text-sm">Market Scanner</h3>
-                            <span class="text-xs text-teal-400">Live Prices</span>
+                            <span class="text-xs text-teal-400">
+                                Live Prices • {{ lastUpdated ?? 'Loading...' }}
+                            </span>
                         </div>
 
                         <div class="overflow-y-auto flex-1 custom-scrollbar">

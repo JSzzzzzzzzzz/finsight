@@ -6,9 +6,11 @@ use App\Models\Asset;
 use App\Models\Portfolio;
 use App\Models\Wallet;
 use App\Models\PortfolioSnapshot;
+use App\Models\ApiKey;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Crypt;
 
 class LunoService
 {
@@ -19,8 +21,18 @@ class LunoService
 
     public function __construct()
     {
-        $this->apiKey = env('LUNO_API_KEY');
-        $this->apiSecret = env('LUNO_API_SECRET');
+        $apiKeyRecord = ApiKey::where('user_id', Auth::id())
+            ->where('exchange', 'Luno')
+            ->first();
+
+        if (!$apiKeyRecord) {
+            $this->apiKey = '';
+            $this->apiSecret = '';
+            return;
+        }
+
+        $this->apiKey = Crypt::decryptString($apiKeyRecord->api_key);
+        $this->apiSecret = Crypt::decryptString($apiKeyRecord->api_secret);
     }
 
     public function getBalance()
@@ -34,6 +46,12 @@ class LunoService
     public function getProcessedBalances()
     {
         $data = $this->getBalance();
+
+        if (!isset($data['balance'])) {
+        throw new \Exception(
+            $data['error'] ?? 'Unable to retrieve Luno balance. Please check your API key and secret.'
+        );
+    }
 
         $crypto = [];
         $cash = 0;
@@ -141,5 +159,12 @@ class LunoService
         return Http::get($this->baseUrl . '/api/1/ticker', [
             'pair' => $pair
         ])->json();
+    }
+
+    public function getAllTickers()
+    {
+        $response = Http::get($this->baseUrl . '/api/1/tickers');
+
+        return $response->json();
     }
 }
