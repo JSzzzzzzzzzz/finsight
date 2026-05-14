@@ -51,11 +51,41 @@ const aiSummary = {
     text: "Global markets are reacting to the latest CPI data release. FinSight AI detects a high probability of short-term volatility. Major support levels for BTC are being tested, while institutional outflows have increased by 15% in the last 4 hours. Recommended strategy: Reduce leverage and monitor stablecoin dominance."
 };
 
-const analyzeCoin = (coin) => {
+const analysisLoading = ref(false);
+const analysisResult = ref(null);
+
+const analyzeCoin = async (coin) => {
     selectedCoin.value = coin;
     showAnalysis.value = true;
-};
+    analysisLoading.value = true;
+    analysisResult.value = null;
 
+    try {
+        const response = await fetch(route('market.analyze'), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+            },
+            body: JSON.stringify({
+                symbol: coin.symbol,
+                pair: coin.pair,
+                display_pair: coin.display_pair,
+            }),
+        });
+
+        const data = await response.json();
+
+        console.log('AI analysis result:', data);
+
+        analysisResult.value = data;
+    } catch (error) {
+        console.error('AI analysis failed:', error);
+    } finally {
+        analysisLoading.value = false;
+    }
+};
 const openChart = (coin) => {
     selectedCoin.value = {
         ...coin,
@@ -119,7 +149,7 @@ onUnmounted(() => {
                                 class="text-gray-400 font-bold uppercase text-[10px] lg:text-xs tracking-wider mb-1 lg:mb-2">
                                 Market Sentiment</h3>
                             <span class="text-2xl lg:text-4xl font-black text-red-500 block">{{ aiSummary.sentiment
-                                }}</span>
+                            }}</span>
                         </div>
 
                         <div class="text-right lg:text-left lg:mt-4 w-1/2 lg:w-full">
@@ -239,7 +269,8 @@ onUnmounted(() => {
             </div>
         </div>
 
-        <CoinAnalysisModal :show="showAnalysis" :coin="selectedCoin" @close="showAnalysis = false" />
+        <CoinAnalysisModal :show="showAnalysis" :coin="selectedCoin" :analysis="analysisResult"
+            :loading="analysisLoading" @close="showAnalysis = false" />
         <MobileChartModal :show="showMobileChart" :symbol="selectedCoin?.tvSymbol" @close="showMobileChart = false" />
     </AppLayout>
 </template>

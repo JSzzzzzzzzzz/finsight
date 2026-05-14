@@ -16,7 +16,7 @@ class DashboardController extends Controller
         if (Auth::user()->is_admin) {
             return redirect()->route('admin.dashboard');
         }
-        
+
         $portfolios = Portfolio::with('asset')
             ->where('user_id', Auth::id())
             ->get();
@@ -51,9 +51,11 @@ class DashboardController extends Controller
 
         $snapshots = PortfolioSnapshot::where('user_id', Auth::id())
             ->whereNotNull('date')
-            ->orderBy('date', 'asc')
+            ->orderBy('date', 'desc')
             ->take(7)
             ->get()
+            ->sortBy('date')
+            ->values()
             ->map(fn($s) => [
                 'date' => $s->date->format('Y-m-d'),
                 'value' => (float) $s->total_value

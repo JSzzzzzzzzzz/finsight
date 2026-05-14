@@ -4,6 +4,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Http;
 use Inertia\Inertia;
 use App\Services\LunoService;
 use App\Http\Controllers\DashboardController;
@@ -11,7 +12,24 @@ use App\Models\TradingPair;
 use App\Models\UserTradingPair;
 use App\Models\ApiKey;
 use App\Models\User;
+use App\Services\NewsService;
 
+Route::get('/test-news/{symbol}', function ($symbol) {
+    $news = new NewsService();
+
+    return response()->json(
+        $news->getCryptoNews($symbol)
+    );
+});
+
+Route::get('/test-news-raw', function () {
+    return response()->json(
+        Http::get('https://min-api.cryptocompare.com/data/v2/news/', [
+            'lang' => 'EN',
+            'api_key' => env('CRYPTOCOMPARE_API_KEY'),
+        ])->json()
+    );
+});
 
 // PUBLIC ROUTE (Landing Page)
 Route::get('/', function () {
@@ -229,6 +247,47 @@ Route::middleware([
 
         return response()->json($marketData);
     })->name('market.scanner');
+
+    Route::post('/market/analyze', function () {
+        if (Auth::user()->is_admin) {
+            abort(403, 'Unauthorized');
+        }
+
+        request()->validate([
+            'symbol' => 'required|string',
+        ]);
+
+        $symbol = strtoupper(request('symbol'));
+
+        if ($symbol === 'XBT') {
+            $symbol = 'BTC';
+        }
+
+        $newsService = new NewsService();
+
+        $news = $newsService->getCryptoNews($symbol);
+
+        $headlines = collect($news)
+            ->pluck('title')
+            ->filter()
+            ->values()
+            ->toArray();
+
+        $sentimentResponse = Http::post(
+            'http://127.0.0.1:5001/analyze-sentiment',
+            [
+                'texts' => $headlines
+            ]
+        );
+
+        $sentimentData = $sentimentResponse->json();
+
+        return response()->json([
+            'symbol' => $symbol,
+            'news' => $news,
+            'sentiment' => $sentimentData,
+        ]);
+    })->name('market.analyze');
 
     Route::get('/settings', function () {
         if (Auth::user()->is_admin) abort(403, 'Unauthorized');
