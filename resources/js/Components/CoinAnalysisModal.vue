@@ -93,30 +93,18 @@ const emit = defineEmits(['close']);
                                     {{ coin?.display_pair ?? coin?.symbol }}
                                 </h2>
                                 <span
-                                    class="px-2 py-1 bg-gray-700 text-gray-300 text-xs font-bold rounded border border-gray-600">
-                                    News Input Ready
+                                    class="px-2 py-1 bg-teal-500/20 text-teal-400 text-xs font-bold rounded border border-teal-500/30">
+                                    {{ marketSignal }} Structure
                                 </span>
                             </div>
 
                             <div class="bg-gray-900 p-4 rounded-lg border border-gray-700 mb-4">
-                                <h4 class="text-xs font-bold text-gray-400 uppercase mb-3">
-                                    Latest Related News
+                                <h4 class="text-xs font-bold text-gray-400 uppercase mb-2">
+                                    Key Driver
                                 </h4>
 
-                                <div v-if="analysis?.news?.length" class="space-y-3">
-                                    <div v-for="(item, index) in analysis.news" :key="index"
-                                        class="border-b border-gray-700 pb-3 last:border-b-0">
-                                        <p class="text-sm text-white font-semibold leading-relaxed">
-                                            {{ item.title }}
-                                        </p>
-                                        <div class="text-xs text-gray-500 mt-1">
-                                            {{ item.source }} • {{ item.published_at }}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <p v-else class="text-sm text-gray-400">
-                                    No related news found for this asset.
+                                <p class="text-sm text-gray-200 leading-relaxed">
+                                    {{ analysis?.explanation ?? 'AI explanation is currently unavailable.' }}
                                 </p>
                             </div>
 

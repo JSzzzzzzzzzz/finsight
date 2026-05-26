@@ -13,6 +13,7 @@ use App\Models\UserTradingPair;
 use App\Models\ApiKey;
 use App\Models\User;
 use App\Services\NewsService;
+use App\Services\OpenAIService;
 
 Route::get('/test-news/{symbol}', function ($symbol) {
     $news = new NewsService();
@@ -213,6 +214,35 @@ Route::middleware([
         ]);
     })->name('market');
 
+    Route::get('/market-summary', function () {
+        if (Auth::user()->is_admin) abort(403, 'Unauthorized');
+
+        $newsService = new NewsService();
+        $openAI = new OpenAIService();
+
+        $news = $newsService->getCryptoNews('BTC');
+
+        $headlines = collect($news)
+            ->pluck('title')
+            ->take(10)
+            ->values()
+            ->toArray();
+
+        $sentimentResponse = Http::post('http://127.0.0.1:5001/analyze-sentiment', [
+            'texts' => $headlines,
+        ]);
+
+        $sentiment = $sentimentResponse->json();
+
+        $summary = $openAI->generateMarketAbstract($headlines, $sentiment);
+
+        return response()->json([
+            'summary' => $summary,
+            'sentiment' => $sentiment,
+            'generated_at' => now('Asia/Kuala_Lumpur')->format('H:i'),
+        ]);
+    })->name('market.summary');
+
     Route::get('/market/scanner', function () {
         if (Auth::user()->is_admin) abort(403, 'Unauthorized');
 
@@ -282,10 +312,19 @@ Route::middleware([
 
         $sentimentData = $sentimentResponse->json();
 
+        $openAI = new OpenAIService();
+
+        $explanation = $openAI->generateAssetExplanation(
+            $symbol,
+            $news,
+            $sentimentData
+        );
+
         return response()->json([
             'symbol' => $symbol,
             'news' => $news,
             'sentiment' => $sentimentData,
+            'explanation' => $explanation,
         ]);
     })->name('market.analyze');
 

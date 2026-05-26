@@ -45,10 +45,56 @@ const props = defineProps({
 
 const marketData = ref(props.marketData ?? []);
 
-const aiSummary = {
-    sentiment: 'Bearish',
-    score: 32,
-    text: "Global markets are reacting to the latest CPI data release. FinSight AI detects a high probability of short-term volatility. Major support levels for BTC are being tested, while institutional outflows have increased by 15% in the last 4 hours. Recommended strategy: Reduce leverage and monitor stablecoin dominance."
+const aiSummary = ref({
+    sentiment: 'Loading',
+    score: 0,
+    text: 'Generating latest market abstract...'
+});
+
+const generatedAt = ref('');
+
+const fetchMarketSummary = async () => {
+    try {
+        const response = await fetch(route('market.summary'), {
+            headers: {
+                'Accept': 'application/json',
+            },
+        });
+
+        if (!response.ok) {
+            console.error('Market summary API error:', response.status);
+            return;
+        }
+
+        const data = await response.json();
+        generatedAt.value = data.generated_at;
+
+        const average = data.sentiment?.average ?? {};
+        const positive = average.positive ?? 0;
+        const negative = average.negative ?? 0;
+        const neutral = average.neutral ?? 0;
+
+        let sentiment = 'Neutral';
+
+        if (positive > negative && positive > neutral) {
+            sentiment = 'Bullish';
+        } else if (negative > positive && negative > neutral) {
+            sentiment = 'Bearish';
+        }
+
+        aiSummary.value = {
+            sentiment,
+            score: Math.round(Math.max(positive, negative, neutral) * 100),
+            text: data.summary ?? 'Unable to generate market summary.'
+        };
+
+
+
+        console.log('Market summary:', data);
+
+    } catch (error) {
+        console.error('Failed to fetch market summary:', error);
+    }
 };
 
 const analysisLoading = ref(false);
@@ -120,6 +166,7 @@ onMounted(() => {
 
     // Refresh market scanner every 3 seconds
     fetchScannerData();
+    fetchMarketSummary();
 
     scannerInterval = setInterval(() => {
         fetchScannerData();
@@ -149,7 +196,7 @@ onUnmounted(() => {
                                 class="text-gray-400 font-bold uppercase text-[10px] lg:text-xs tracking-wider mb-1 lg:mb-2">
                                 Market Sentiment</h3>
                             <span class="text-2xl lg:text-4xl font-black text-red-500 block">{{ aiSummary.sentiment
-                            }}</span>
+                                }}</span>
                         </div>
 
                         <div class="text-right lg:text-left lg:mt-4 w-1/2 lg:w-full">
@@ -174,8 +221,7 @@ onUnmounted(() => {
                                 <span class="mr-2">✨</span> FinSight Market Abstract
                             </h3>
                             <span
-                                class="text-[10px] lg:text-xs bg-gray-900 text-gray-400 px-2 lg:px-3 py-1 rounded border border-gray-700">2m
-                                ago</span>
+                                class="text-[10px] lg:text-xs bg-gray-900 text-gray-400 px-2 lg:px-3 py-1 rounded border border-gray-700">Generated at {{ generatedAt || '--:--' }}</span>
                         </div>
                         <p class="text-gray-300 leading-relaxed text-xs lg:text-base line-clamp-3 lg:line-clamp-none">
                             {{ aiSummary.text }}
