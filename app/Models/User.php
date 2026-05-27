@@ -81,4 +81,14 @@ class User extends Authenticatable
     {
         return $this->hasMany(\App\Models\ApiKey::class);
     }
+
+    public function portfolios()
+    {
+        return $this->hasMany(\App\Models\Portfolio::class);
+    }
+
+    public function wallet()
+    {
+        return $this->hasOne(\App\Models\Wallet::class);
+    }
 }

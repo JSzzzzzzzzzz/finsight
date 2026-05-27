@@ -420,4 +420,36 @@ Route::middleware([
                 ->with('error', $e->getMessage());
         }
     })->middleware('auth')->name('sync.luno');
+
+    Route::get('/leaderboard-data', function () {
+        $users = \App\Models\User::where('is_admin', false)
+            ->get()
+            ->map(function ($user) {
+                $latestSnapshot = \App\Models\PortfolioSnapshot::where('user_id', $user->id)
+                    ->latest('date')
+                    ->first();
+
+                $totalValue = $latestSnapshot?->total_value ?? 0;
+
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'total_value' => round($totalValue, 2),
+                    'is_current_user' => $user->id === auth()->id(),
+                ];
+            })
+            ->sortByDesc('total_value')
+            ->values()
+            ->map(function ($user, $index) {
+                return [
+                    'rank' => $index + 1,
+                    'name' => $user['is_current_user'] ? $user['name'] . ' (You)' : $user['name'],
+                    'amount' => 'RM ' . number_format($user['total_value'], 2),
+                    'total_value' => $user['total_value'],
+                    'is_current_user' => $user['is_current_user'],
+                ];
+            });
+
+        return response()->json($users);
+    })->name('leaderboard.data');
 });

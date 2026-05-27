@@ -3,11 +3,22 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import PortfolioChart from '@/Components/PortfolioChart.vue';
 import LeaderboardModal from '@/Components/LeaderboardModal.vue';
 import RiskModal from '@/Components/RiskModal.vue';
-import { ref } from 'vue';
+import RiskNudgeModal from '@/Components/RiskNudgeModal.vue';
+import { ref, onMounted } from 'vue';
 import { router } from '@inertiajs/vue3';
 
 const showLeaderboard = ref(false);
 const showRiskModal = ref(false);
+
+const showRiskNudge = ref(false);
+
+const riskNudge = ref({
+    title: '',
+    message: '',
+    riskScore: 0,
+    riskLevel: '',
+    suggestion: '',
+});
 
 const riskSimulation = ref({
     title: '',
@@ -20,6 +31,43 @@ const riskSimulation = ref({
     projectedValue: 0,
     scenario: 'Moderate',
 });
+
+const checkRiskNudge = async () => {
+    try {
+        const response = await fetch(route('market.summary'), {
+            headers: {
+                Accept: 'application/json',
+            },
+        });
+
+        if (!response.ok) return;
+
+        const data = await response.json();
+
+        const riskScore = data.sentiment?.risk_score ?? 0;
+        const riskLevel = data.sentiment?.risk_level ?? 'Unknown';
+
+        console.log('Risk nudge check:', {
+            riskScore,
+            riskLevel,
+            changeAmount: props.changeAmount,
+        });
+
+        if (riskScore >= 65 && props.changeAmount < 0) {
+            riskNudge.value = {
+                title: 'AI Risk Nudge: Elevated Portfolio Risk',
+                message: 'FinSight detected negative market sentiment while your portfolio value is declining.',
+                riskScore,
+                riskLevel,
+                suggestion: 'Consider reviewing your current exposure and monitoring market updates before making further decisions.',
+            };
+
+            showRiskNudge.value = true;
+        }
+    } catch (error) {
+        console.error('Failed to check risk nudge:', error);
+    }
+};
 
 const triggerRiskSimulation = () => {
     calculateRiskSimulation('Moderate', 15);
@@ -56,6 +104,10 @@ const props = defineProps({
     snapshots: Array,
     percentChange: Number,
     changeAmount: Number
+});
+
+onMounted(() => {
+    checkRiskNudge();
 });
 
 </script>
@@ -242,5 +294,6 @@ const props = defineProps({
         <LeaderboardModal :show="showLeaderboard" @close="showLeaderboard = false" />
         <RiskModal :show="showRiskModal" :risk="riskSimulation" @simulate="calculateRiskSimulation"
             @close="showRiskModal = false" />
+        <RiskNudgeModal :show="showRiskNudge" :nudge="riskNudge" @close="showRiskNudge = false" />
     </AppLayout>
 </template>
