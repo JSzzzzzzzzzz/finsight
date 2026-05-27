@@ -9,6 +9,42 @@ import { router } from '@inertiajs/vue3';
 const showLeaderboard = ref(false);
 const showRiskModal = ref(false);
 
+const riskSimulation = ref({
+    title: '',
+    message: '',
+    impact: '',
+    suggestion: '',
+    currentValue: 0,
+    dropPercent: 12.5,
+    estimatedLoss: 0,
+    projectedValue: 0,
+    scenario: 'Moderate',
+});
+
+const triggerRiskSimulation = () => {
+    calculateRiskSimulation('Moderate', 15);
+    showRiskModal.value = true;
+};
+
+
+const calculateRiskSimulation = (scenario, dropPercent) => {
+    const currentValue = props.totalBalance ?? 0;
+    const estimatedLoss = currentValue * (dropPercent / 100);
+    const projectedValue = currentValue - estimatedLoss;
+
+    riskSimulation.value = {
+        title: 'Risk Simulation: Market Drop Scenario',
+        message: `FinSight simulated a ${dropPercent}% market drop scenario based on your current portfolio value.`,
+        impact: `Estimated loss: RM ${estimatedLoss.toFixed(2)}. Projected portfolio value: RM ${projectedValue.toFixed(2)}.`,
+        suggestion: 'This simulation is for educational purposes only. Review your portfolio exposure and monitor volatile assets carefully.',
+        currentValue,
+        dropPercent,
+        estimatedLoss,
+        projectedValue,
+        scenario,
+    };
+};
+
 const syncLuno = () => {
     router.post(route('sync.luno'));
 };
@@ -33,7 +69,7 @@ const props = defineProps({
                     My Portfolio Dashboard
                 </h2>
                 <div class="flex space-x-2 md:space-x-4">
-                    <button @click="showRiskModal = true"
+                    <button @click="triggerRiskSimulation"
                         class="px-3 py-2 bg-red-600 rounded-md text-white text-xs font-bold hover:bg-red-500">
                         Simulate Risk
                     </button>
@@ -109,8 +145,7 @@ const props = defineProps({
                                 Risk Level
                             </div>
 
-                            <div class="text-3xl font-bold text-r
-                            ed-400 mt-2">
+                            <div class="text-3xl font-bold text-red-400 mt-2">
                                 High
                             </div>
 
@@ -205,6 +240,7 @@ const props = defineProps({
         </div>
 
         <LeaderboardModal :show="showLeaderboard" @close="showLeaderboard = false" />
-        <RiskModal :show="showRiskModal" @close="showRiskModal = false" />
+        <RiskModal :show="showRiskModal" :risk="riskSimulation" @simulate="calculateRiskSimulation"
+            @close="showRiskModal = false" />
     </AppLayout>
 </template>

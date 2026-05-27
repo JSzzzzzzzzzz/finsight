@@ -188,15 +188,26 @@ onUnmounted(() => {
 
                 <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 lg:gap-6">
 
-                    <div
-                        class="bg-gray-800 p-4 lg:p-6 shadow-xl rounded-lg border-t-4 border-red-500 col-span-1 flex flex-row lg:flex-col items-center lg:items-stretch justify-between lg:justify-center">
+                    <div class="bg-gray-800 p-4 lg:p-6 shadow-xl rounded-lg border-t-4 col-span-1 flex flex-row lg:flex-col items-center lg:items-stretch justify-between lg:justify-center"
+                        :class="{
+                            'border-green-400': aiSummary.sentiment === 'Bullish',
+                            'border-red-500': aiSummary.sentiment === 'Bearish',
+                            'border-yellow-400': aiSummary.sentiment === 'Neutral',
+                            'border-gray-500': aiSummary.sentiment === 'Loading',
+                        }">
 
                         <div>
                             <h3
                                 class="text-gray-400 font-bold uppercase text-[10px] lg:text-xs tracking-wider mb-1 lg:mb-2">
                                 Market Sentiment</h3>
-                            <span class="text-2xl lg:text-4xl font-black text-red-500 block">{{ aiSummary.sentiment
-                                }}</span>
+                            <span class="text-2xl lg:text-4xl font-black block" :class="{
+                                'text-green-400': aiSummary.sentiment === 'Bullish',
+                                'text-red-500': aiSummary.sentiment === 'Bearish',
+                                'text-yellow-400': aiSummary.sentiment === 'Neutral',
+                                'text-gray-400': aiSummary.sentiment === 'Loading',
+                            }">
+                                {{ aiSummary.sentiment }}
+                            </span>
                         </div>
 
                         <div class="text-right lg:text-left lg:mt-4 w-1/2 lg:w-full">
@@ -208,8 +219,12 @@ onUnmounted(() => {
                                 </div>
                             </div>
                             <div class="w-full bg-gray-700 rounded-full h-1.5 lg:h-2">
-                                <div class="h-1.5 lg:h-2 rounded-full bg-red-600 shadow-[0_0_10px_rgba(220,38,38,0.5)]"
-                                    style="width: 32%"></div>
+                                <div class="h-1.5 lg:h-2 rounded-full transition-all duration-500" :class="{
+                                    'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]': aiSummary.sentiment === 'Bullish',
+                                    'bg-red-600 shadow-[0_0_10px_rgba(220,38,38,0.5)]': aiSummary.sentiment === 'Bearish',
+                                    'bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.5)]': aiSummary.sentiment === 'Neutral',
+                                    'bg-gray-500': aiSummary.sentiment === 'Loading',
+                                }" :style="{ width: aiSummary.score + '%' }"></div>
                             </div>
                         </div>
                     </div>
@@ -221,7 +236,8 @@ onUnmounted(() => {
                                 <span class="mr-2">✨</span> FinSight Market Abstract
                             </h3>
                             <span
-                                class="text-[10px] lg:text-xs bg-gray-900 text-gray-400 px-2 lg:px-3 py-1 rounded border border-gray-700">Generated at {{ generatedAt || '--:--' }}</span>
+                                class="text-[10px] lg:text-xs bg-gray-900 text-gray-400 px-2 lg:px-3 py-1 rounded border border-gray-700">Generated
+                                at {{ generatedAt || '--:--' }}</span>
                         </div>
                         <p class="text-gray-300 leading-relaxed text-xs lg:text-base line-clamp-3 lg:line-clamp-none">
                             {{ aiSummary.text }}
