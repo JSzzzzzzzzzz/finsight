@@ -20,6 +20,12 @@ const riskNudge = ref({
     suggestion: '',
 });
 
+const dashboardRisk = ref({
+    level: 'Loading',
+    score: 0,
+    message: 'Checking market risk...',
+});
+
 const riskSimulation = ref({
     title: '',
     message: '',
@@ -46,6 +52,17 @@ const checkRiskNudge = async () => {
 
         const riskScore = data.sentiment?.risk_score ?? 0;
         const riskLevel = data.sentiment?.risk_level ?? 'Unknown';
+
+        dashboardRisk.value = {
+            level: riskLevel,
+            score: riskScore,
+            message:
+                riskScore >= 65
+                    ? 'Volatility Alert'
+                    : riskScore >= 35
+                        ? 'Moderate market caution'
+                        : 'Market conditions stable',
+        };
 
         console.log('Risk nudge check:', {
             riskScore,
@@ -197,12 +214,25 @@ onMounted(() => {
                                 Risk Level
                             </div>
 
-                            <div class="text-3xl font-bold text-red-400 mt-2">
-                                High
+                            <div class="text-3xl font-bold mt-2" :class="{
+                                'text-red-400': dashboardRisk.level === 'High',
+                                'text-yellow-400': dashboardRisk.level === 'Medium',
+                                'text-green-400': dashboardRisk.level === 'Low',
+                                'text-gray-400': dashboardRisk.level === 'Loading',
+                            }">
+                                {{ dashboardRisk.level }}
                             </div>
 
-                            <div class="text-xs text-red-400 mt-2">
-                                ⚠️ Volatility Alert
+                            <div class="text-xs mt-2 text-gray-300">
+                                AI Risk Score: {{ dashboardRisk.score }}/100
+                            </div>
+
+                            <div class="text-xs mt-1" :class="{
+                                'text-red-400': dashboardRisk.level === 'High',
+                                'text-yellow-400': dashboardRisk.level === 'Medium',
+                                'text-green-400': dashboardRisk.level === 'Low',
+                            }">
+                                ⚠️ {{ dashboardRisk.message }}
                             </div>
                         </div>
 

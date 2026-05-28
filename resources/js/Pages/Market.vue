@@ -74,17 +74,19 @@ const fetchMarketSummary = async () => {
         const negative = average.negative ?? 0;
         const neutral = average.neutral ?? 0;
 
+        const moodIndex = Math.round(((positive - negative + 1) / 2) * 100);
+
         let sentiment = 'Neutral';
 
-        if (positive > negative && positive > neutral) {
+        if (moodIndex >= 61) {
             sentiment = 'Bullish';
-        } else if (negative > positive && negative > neutral) {
+        } else if (moodIndex <= 39) {
             sentiment = 'Bearish';
         }
 
         aiSummary.value = {
             sentiment,
-            score: Math.round(Math.max(positive, negative, neutral) * 100),
+            score: moodIndex,
             text: data.summary ?? 'Unable to generate market summary.'
         };
 
@@ -212,7 +214,7 @@ onUnmounted(() => {
 
                         <div class="text-right lg:text-left lg:mt-4 w-1/2 lg:w-full">
                             <div class="flex items-baseline justify-end lg:justify-between mb-1">
-                                <span class="hidden lg:inline text-xs text-gray-500">Confidence</span>
+                                <span class="hidden lg:inline text-xs text-gray-500">Market Mood Index</span>
                                 <div>
                                     <span class="text-xl lg:text-2xl font-bold text-white">{{ aiSummary.score }}</span>
                                     <span class="text-xs text-gray-500">/100</span>
