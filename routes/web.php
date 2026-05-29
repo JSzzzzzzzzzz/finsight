@@ -60,9 +60,55 @@ Route::middleware([
 
     // A. System Health (Dashboard)
     Route::get('/admin/dashboard', function () {
-        if (!Auth::user()->is_admin) abort(403, 'Unauthorized');
         return Inertia::render('Admin/ADashboard');
     })->name('admin.dashboard');
+
+    Route::get('/admin/system-health-data', function () {
+        $services = [];
+
+        $check = function ($name, $url) {
+            $start = microtime(true);
+
+            try {
+                $response = Http::timeout(5)->get($url);
+                $latency = round((microtime(true) - $start) * 1000);
+
+                return [
+                    'name' => $name,
+                    'url' => $url,
+                    'latency' => $latency,
+                    'status' => $response->successful() ? 'ONLINE' : 'DEGRADED',
+                ];
+            } catch (\Exception $e) {
+                return [
+                    'name' => $name,
+                    'url' => $url,
+                    'latency' => null,
+                    'status' => 'OFFLINE',
+                ];
+            }
+        };
+
+        $services[] = $check('Luno Exchange API', 'https://api.luno.com/api/1/tickers');
+        $services[] = $check('CryptoCompare News API', 'https://min-api.cryptocompare.com/data/v2/news/?lang=EN&api_key=' . env('CRYPTOCOMPARE_API_KEY'));
+        $services[] = $check('Laravel Backend', url('/'));
+        $services[] = $check('FinBERT AI Service', 'http://127.0.0.1:5001/');
+
+        $onlineCount = collect($services)->where('status', 'ONLINE')->count();
+
+        return response()->json([
+            'system_status' => $onlineCount === count($services) ? 'Operational' : 'Degraded',
+            'active_services' => $onlineCount,
+            'total_services' => count($services),
+            'services' => $services,
+
+            'total_users' => \App\Models\User::where('is_admin', false)->count(),
+            'new_users_today' => \App\Models\User::where('is_admin', false)
+                ->whereDate('created_at', now('Asia/Kuala_Lumpur')->toDateString())
+                ->count(),
+            'checked_at' => now('Asia/Kuala_Lumpur')->format('H:i:s'),
+        ]);
+    })->name('admin.system.health.data');
 
     // B. Manage Users
     Route::get('/admin/users', function () {

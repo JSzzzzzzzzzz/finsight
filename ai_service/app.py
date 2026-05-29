@@ -88,6 +88,13 @@ def analyze_sentiment():
         "results": results
     })
 
+@app.route("/", methods=["GET"])
+def health_check():
+    return jsonify({
+        "status": "online",
+        "service": "FinBERT AI Service"
+    }), 200
 
 if __name__ == "__main__":
     app.run(port=5001, debug=True)
+
