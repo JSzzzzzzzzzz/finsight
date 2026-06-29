@@ -50,7 +50,7 @@ Route::middleware([
     'user.status',
 ])->group(function () {
 
-    // 1. SMART DASHBOARD REDIRECT
+    // SMART DASHBOARD REDIRECT
     Route::get('/dashboard', [DashboardController::class, 'index'])
         ->middleware(['auth'])
         ->name('dashboard');
@@ -375,14 +375,54 @@ Route::middleware([
     })->name('market.analyze');
 
     Route::get('/settings', function () {
-        if (Auth::user()->is_admin) abort(403, 'Unauthorized');
+        if (Auth::user()->is_admin) {
+            abort(403, 'Unauthorized');
+        }
 
         $selectedPairIds = UserTradingPair::where('user_id', Auth::id())
             ->pluck('trading_pair_id')
             ->toArray();
-        $hasApiKey = ApiKey::where('user_id', Auth::id())
+
+        $apiKeyRecord = ApiKey::where('user_id', Auth::id())
             ->where('exchange', 'Luno')
-            ->exists();
+            ->first();
+
+        $apiConnection = null;
+
+        if ($apiKeyRecord) {
+            try {
+                $plainApiKey = Crypt::decryptString($apiKeyRecord->api_key);
+
+                $length = strlen($plainApiKey);
+
+                if ($length > 8) {
+                    $maskedApiKey =
+                        substr($plainApiKey, 0, 4)
+                        . str_repeat('•', max(4, $length - 8))
+                        . substr($plainApiKey, -4);
+                } else {
+                    $maskedApiKey = str_repeat('•', max(4, $length));
+                }
+
+                $apiConnection = [
+                    'exchange' => $apiKeyRecord->exchange,
+                    'masked_api_key' => $maskedApiKey,
+                    'masked_secret' => '••••••••••••••••',
+                    'updated_at' => optional($apiKeyRecord->updated_at)
+                        ?->timezone('Asia/Kuala_Lumpur')
+                        ->format('d M Y, h:i A'),
+                ];
+            } catch (\Throwable $exception) {
+                report($exception);
+
+                $apiConnection = [
+                    'exchange' => 'Luno',
+                    'masked_api_key' => 'Unable to display',
+                    'masked_secret' => '••••••••••••••••',
+                    'updated_at' => null,
+                ];
+            }
+        }
 
         return Inertia::render('Settings', [
             'availablePairs' => TradingPair::where('is_active', true)
@@ -392,14 +432,19 @@ Route::middleware([
 
             'selectedPairs' => UserTradingPair::with('tradingPair')
                 ->where('user_id', Auth::id())
-                ->join('trading_pairs', 'user_trading_pairs.trading_pair_id', '=', 'trading_pairs.id')
+                ->join(
+                    'trading_pairs',
+                    'user_trading_pairs.trading_pair_id',
+                    '=',
+                    'trading_pairs.id'
+                )
                 ->orderBy('trading_pairs.symbol', 'asc')
                 ->select('user_trading_pairs.*')
                 ->get(),
 
             'selectedPairIds' => $selectedPairIds,
 
-            'hasApiKey' => $hasApiKey,
+            'apiConnection' => $apiConnection,
         ]);
     })->name('settings');
 
@@ -431,12 +476,37 @@ Route::middleware([
     })->name('settings.pairs.destroy');
 
     Route::post('/settings/api-key', function () {
-        if (Auth::user()->is_admin) abort(403, 'Unauthorized');
+        if (Auth::user()->is_admin) {
+            abort(403, 'Unauthorized');
+        }
 
-        request()->validate([
-            'api_key' => 'required|string',
-            'api_secret' => 'required|string',
+        $validated = request()->validate([
+            'api_key' => ['required', 'string', 'max:255'],
+            'api_secret' => ['required', 'string', 'max:255'],
         ]);
+
+        $apiKey = trim($validated['api_key']);
+        $apiSecret = trim($validated['api_secret']);
+
+        try {
+            $response = Http::withBasicAuth($apiKey, $apiSecret)
+                ->timeout(10)
+                ->get('https://api.luno.com/api/1/balance');
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return back()->withErrors([
+                'api_key' => 'Unable to contact Luno. Please check your internet connection and try again.',
+            ]);
+        }
+
+        $responseData = $response->json();
+
+        if (!$response->successful() || !isset($responseData['balance'])) {
+            return back()->withErrors([
+                'api_key' => 'Unable to verify the Luno credentials. Please check the API key, secret key, and API permissions.',
+            ]);
+        }
 
         ApiKey::updateOrCreate(
             [
@@ -444,13 +514,39 @@ Route::middleware([
                 'exchange' => 'Luno',
             ],
             [
-                'api_key' => Crypt::encryptString(request('api_key')),
-                'api_secret' => Crypt::encryptString(request('api_secret')),
+                'api_key' => Crypt::encryptString($apiKey),
+                'api_secret' => Crypt::encryptString($apiSecret),
             ]
         );
 
-        return back();
+        return back()->with(
+            'success',
+            'The Luno connection was verified successfully. Your credentials were encrypted and saved.'
+        );
     })->name('settings.api-key.store');
+
+    Route::delete('/settings/api-key', function () {
+        if (Auth::user()->is_admin) {
+            abort(403, 'Unauthorized');
+        }
+
+        $apiKeyRecord = ApiKey::where('user_id', Auth::id())
+            ->where('exchange', 'Luno')
+            ->first();
+
+        if (!$apiKeyRecord) {
+            return back()->withErrors([
+                'api_key' => 'No active Luno connection was found.',
+            ]);
+        }
+
+        $apiKeyRecord->delete();
+
+        return back()->with(
+            'success',
+            'The Luno exchange connection was disconnected successfully.'
+        );
+    })->name('settings.api-key.destroy');
 
     Route::post('/sync-luno', function () {
         if (Auth::user()->is_admin) abort(403, 'Admin cannot sync portfolio.');

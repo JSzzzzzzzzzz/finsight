@@ -1,42 +1,56 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
 import ApiModal from '@/Components/ApiModal.vue';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
 
 const props = defineProps({
-    availablePairs: Array,
-    selectedPairs: Array,
-    selectedPairIds: Array,
-    hasApiKey: Boolean,
+    availablePairs: {
+        type: Array,
+        default: () => [],
+    },
+    selectedPairs: {
+        type: Array,
+        default: () => [],
+    },
+    selectedPairIds: {
+        type: Array,
+        default: () => [],
+    },
+    apiConnection: {
+        type: Object,
+        default: null,
+    },
 });
 
 const showApiModal = ref(false);
 const showPairModal = ref(false);
-const savedApiKey = ref(null);
+
+const hasApiConnection = computed(() => Boolean(props.apiConnection));
 
 const addPair = (pairId) => {
-    router.post(route('settings.pairs.store'), {
-        trading_pair_id: pairId
-    }, {
-        preserveScroll: true,
-        onSuccess: () => {
-            showPairModal.value = false;
+    router.post(
+        route('settings.pairs.store'),
+        {
+            trading_pair_id: pairId,
+        },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                showPairModal.value = false;
+            },
         }
-    });
+    );
 };
 
 const removePair = (id) => {
-    if (!confirm('Remove this pair from your watchlist?')) return;
+    if (!confirm('Remove this pair from your watchlist?')) {
+        return;
+    }
 
     router.delete(route('settings.pairs.destroy', id), {
-        preserveScroll: true
+        preserveScroll: true,
     });
-};
-
-const handleApiSave = (maskedKey) => {
-    savedApiKey.value = maskedKey;
-    alert("Success! Keys encrypted and saved.");
 };
 
 const displayPair = (symbol) => {
@@ -46,7 +60,6 @@ const displayPair = (symbol) => {
 const displaySymbolInitial = (symbol) => {
     return symbol === 'XBTMYR' ? 'B' : symbol.substring(0, 1);
 };
-
 </script>
 
 <template>
@@ -59,15 +72,17 @@ const displaySymbolInitial = (symbol) => {
                     System Configuration
                 </h2>
 
-                <button @click="showApiModal = !showApiModal" :class="props.hasApiKey
+                <button @click="showApiModal = true" :class="hasApiConnection
                     ? 'bg-emerald-600 hover:bg-emerald-500'
                     : 'bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700'"
                     class="w-auto inline-flex justify-center items-center px-4 py-2 md:px-6 md:py-3 border border-transparent rounded-lg font-bold text-[10px] md:text-xs text-white uppercase tracking-widest active:scale-95 focus:outline-none transition shadow-lg hover:shadow-teal-500/30 whitespace-nowrap">
-                    {{ props.hasApiKey ? 'Exchange Connected' : 'API Connection' }}
+                    {{ hasApiConnection ? 'Exchange Connected' : 'API Connection' }}
                 </button>
 
-                <ApiModal :show="showApiModal" :existingApiKey="savedApiKey" @close="showApiModal = false"
-                    @save="handleApiSave" />
+
+                <ApiModal :show="showApiModal" :api-connection="props.apiConnection" @close="showApiModal = false" />
+
+
             </div>
         </template>
 

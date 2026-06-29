@@ -1,173 +1,400 @@
 <script setup>
 import { ref, watch } from 'vue';
-import { useForm } from '@inertiajs/vue3';
+import { router, useForm } from '@inertiajs/vue3';
 
 const props = defineProps({
-    show: Boolean,
-    existingApiKey: String,
+    show: {
+        type: Boolean,
+        default: false,
+    },
+    apiConnection: {
+        type: Object,
+        default: null,
+    },
 });
 
 const emit = defineEmits(['close']);
 
-const isEditing = ref(true);
+const isEditing = ref(!props.apiConnection);
 const showSecret = ref(false);
+const isDeleting = ref(false);
 
 const form = useForm({
     api_key: '',
     api_secret: '',
 });
 
-watch(() => props.show, () => {
-    if (props.existingApiKey) {
-        isEditing.value = false;
-        form.api_key = props.existingApiKey;
-        form.api_secret = '••••••••••••••••••••••••';
-    } else {
-        resetForm();
-    }
-});
-
-const resetForm = () => {
-    isEditing.value = true;
-    form.api_key = '';
-    form.api_secret = '';
+const resetCredentialForm = () => {
+    form.reset();
+    form.clearErrors();
     showSecret.value = false;
 };
 
-const save = () => {
+const showConnectedState = () => {
+    resetCredentialForm();
+    isEditing.value = false;
+};
+
+const startCredentialEntry = () => {
+    resetCredentialForm();
+    isEditing.value = true;
+};
+
+const cancelEditing = () => {
+    resetCredentialForm();
+
+    if (props.apiConnection) {
+        isEditing.value = false;
+        return;
+    }
+
+    emit('close');
+};
+
+watch(
+    () => props.show,
+    (isVisible) => {
+        if (!isVisible) {
+            return;
+        }
+
+        resetCredentialForm();
+        isEditing.value = !props.apiConnection;
+    }
+);
+
+watch(
+    () => props.apiConnection,
+    (connection) => {
+        if (props.show && connection) {
+            isEditing.value = false;
+        }
+    }
+);
+
+const saveCredentials = () => {
     form.post(route('settings.api-key.store'), {
         preserveScroll: true,
+
         onSuccess: () => {
-            alert('Success! Keys encrypted and saved.');
+            resetCredentialForm();
+            isEditing.value = false;
+
+            window.alert(
+                'The Luno connection was verified and saved successfully.'
+            );
+        },
+
+        onError: () => {
+            isEditing.value = true;
+        },
+    });
+};
+
+const disconnectExchange = () => {
+    const confirmed = window.confirm(
+        'Disconnect Luno from FinSight? Your stored API credentials will be deleted. Existing portfolio history will remain available.'
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    isDeleting.value = true;
+
+    router.delete(route('settings.api-key.destroy'), {
+        preserveScroll: true,
+
+        onSuccess: () => {
+            resetCredentialForm();
+            isEditing.value = true;
             emit('close');
+
+            window.alert(
+                'The Luno exchange connection was disconnected successfully.'
+            );
+        },
+
+        onFinish: () => {
+            isDeleting.value = false;
         },
     });
 };
 </script>
 
 <template>
-    <transition enter-active-class="transition ease-out duration-300" enter-from-class="opacity-0"
-        enter-to-class="opacity-100" leave-active-class="transition ease-in duration-200" leave-from-class="opacity-100"
-        leave-to-class="opacity-0">
-        <div v-if="show"
+    <transition
+        enter-active-class="transition ease-out duration-300"
+        enter-from-class="opacity-0"
+        enter-to-class="opacity-100"
+        leave-active-class="transition ease-in duration-200"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
+    >
+        <div
+            v-if="show"
             class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm transition-opacity"
-            @click="$emit('close')">
+            @click="emit('close')"
+        >
+            <div
+                class="bg-gray-800 rounded-lg shadow-2xl overflow-hidden w-full max-w-lg m-4 border border-gray-700"
+                @click.stop
+            >
+                <!-- HEADER -->
+                <div
+                    class="bg-gradient-to-r from-teal-500 to-cyan-600 px-4 py-3 flex justify-between items-center"
+                >
+                    <h3 class="text-base font-bold text-white">
+                        Exchange Connection
+                    </h3>
 
-            <transition enter-active-class="transition ease-out duration-300"
-                enter-from-class="opacity-0 translate-y-4 sm:scale-95"
-                enter-to-class="opacity-100 translate-y-0 sm:scale-100"
-                leave-active-class="transition ease-in duration-200"
-                leave-from-class="opacity-100 translate-y-0 sm:scale-100"
-                leave-to-class="opacity-0 translate-y-4 sm:scale-95">
-                <div class="bg-gray-800 rounded-lg shadow-2xl overflow-hidden transform transition-all w-full max-w-lg m-4 border border-gray-700"
-                    @click.stop>
+                    <button
+                        type="button"
+                        class="text-gray-200 hover:text-white transition"
+                        @click="emit('close')"
+                    >
+                        ✕
+                    </button>
+                </div>
 
-                    <div class="bg-gradient-to-r from-teal-500 to-cyan-600 px-4 py-3 flex justify-between items-center">
-                        <h3 class="text-base font-bold text-white">Exchange Connection</h3>
-                        <button @click="$emit('close')" class="text-gray-200 hover:text-white transition">✕</button>
-                    </div>
-
-                    <div class="p-6">
-
-                        <div v-if="!isEditing" class="space-y-4">
+                <!-- BODY -->
+                <div class="p-6">
+                    <!-- CONNECTED STATE -->
+                    <div
+                        v-if="apiConnection && !isEditing"
+                        class="space-y-5"
+                    >
+                        <div
+                            class="flex items-center p-3 bg-emerald-900/20 rounded-lg border border-emerald-500/30"
+                        >
                             <div
-                                class="flex items-center p-3 bg-emerald-900/20 rounded-lg border border-emerald-500/30">
-                                <div
-                                    class="flex-shrink-0 h-10 w-10 rounded-full bg-emerald-800/50 flex items-center justify-center text-emerald-400 mr-4 border border-emerald-500/50">
-                                    ✓
-                                </div>
-                                <div>
-                                    <p class="text-sm font-bold text-emerald-400">Connection Active</p>
-                                    <p class="text-xs text-emerald-200/70">Your keys are encrypted and secure.</p>
-                                </div>
+                                class="flex-shrink-0 h-10 w-10 rounded-full bg-emerald-800/50 flex items-center justify-center text-emerald-400 mr-4 border border-emerald-500/50"
+                            >
+                                ✓
                             </div>
 
                             <div>
-                                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wide">Active API
-                                    Key</label>
-                                <div
-                                    class="mt-1 font-mono text-sm font-bold text-white bg-gray-900 p-2 rounded border border-gray-600 tracking-widest">
-                                    {{ form.api_key }}
-                                </div>
+                                <p class="text-sm font-bold text-emerald-400">
+                                    Connection Active
+                                </p>
+
+                                <p class="text-xs text-emerald-200/70">
+                                    Your Luno credentials are encrypted and stored securely.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label
+                                class="block text-xs font-bold text-gray-400 uppercase tracking-wide"
+                            >
+                                Exchange
+                            </label>
+
+                            <div
+                                class="mt-1 text-sm font-bold text-white bg-gray-900 p-3 rounded border border-gray-600"
+                            >
+                                {{ apiConnection.exchange }}
+                            </div>
+                        </div>
+
+                        <div>
+                            <label
+                                class="block text-xs font-bold text-gray-400 uppercase tracking-wide"
+                            >
+                                API Key
+                            </label>
+
+                            <div
+                                class="mt-1 font-mono text-sm font-bold text-white bg-gray-900 p-3 rounded border border-gray-600 tracking-wider break-all"
+                            >
+                                {{ apiConnection.masked_api_key }}
+                            </div>
+                        </div>
+
+                        <div>
+                            <label
+                                class="block text-xs font-bold text-gray-400 uppercase tracking-wide"
+                            >
+                                Secret Key
+                            </label>
+
+                            <div
+                                class="mt-1 font-mono text-sm font-bold text-gray-400 bg-gray-900 p-3 rounded border border-gray-600 tracking-wider"
+                            >
+                                {{ apiConnection.masked_secret }}
                             </div>
 
-                            <button @click="resetForm"
-                                class="text-xs text-teal-400 hover:text-teal-300 font-bold underline">
-                                Update with new keys
+                            <p class="mt-1 text-xs text-gray-500">
+                                The secret key cannot be displayed after it has been saved.
+                            </p>
+                        </div>
+
+                        <div v-if="apiConnection.updated_at">
+                            <label
+                                class="block text-xs font-bold text-gray-400 uppercase tracking-wide"
+                            >
+                                Last Updated
+                            </label>
+
+                            <p class="mt-1 text-sm text-gray-300">
+                                {{ apiConnection.updated_at }}
+                            </p>
+                        </div>
+
+                        <div
+                            class="flex flex-col sm:flex-row gap-3 pt-2"
+                        >
+                            <button
+                                type="button"
+                                class="flex-1 bg-teal-600 hover:bg-teal-500 text-white font-bold py-2.5 px-4 rounded-lg transition"
+                                @click="startCredentialEntry"
+                            >
+                                Replace Credentials
+                            </button>
+
+                            <button
+                                type="button"
+                                :disabled="isDeleting"
+                                class="flex-1 border border-red-500/50 text-red-400 hover:bg-red-500 hover:text-white font-bold py-2.5 px-4 rounded-lg transition disabled:opacity-50"
+                                @click="disconnectExchange"
+                            >
+                                {{
+                                    isDeleting
+                                        ? 'Disconnecting...'
+                                        : 'Disconnect Exchange'
+                                }}
                             </button>
                         </div>
+                    </div>
 
-                        <div v-else class="space-y-4">
-                            <p class="text-sm text-gray-400 mb-4">
-                                Paste your API keys below.
+                    <!-- CREDENTIAL FORM -->
+                    <div v-else class="space-y-4">
+                        <div>
+                            <p class="text-sm text-gray-300">
+                                {{
+                                    apiConnection
+                                        ? 'Enter new Luno credentials to replace the current connection.'
+                                        : 'Enter your Luno read-only API credentials.'
+                                }}
                             </p>
 
-                            <div>
-                                <label class="block text-sm font-medium text-gray-300">API Key</label>
-                                <input v-model="form.api_key" type="text"
-                                    class="mt-1 block w-full bg-gray-900 border-gray-600 rounded-md shadow-sm text-white placeholder-gray-500 focus:border-teal-500 focus:ring-teal-500 sm:text-sm"
-                                    placeholder="Paste API Key here...">
-                                <div v-if="form.errors.api_key" class="text-red-400 text-xs mt-1">
-                                    {{ form.errors.api_key }}
-                                </div>
+                            <p class="mt-1 text-xs text-yellow-400">
+                                Use read-only credentials. Do not enable trading or withdrawal permissions.
+                            </p>
+                        </div>
+
+                        <div>
+                            <label
+                                for="api_key"
+                                class="block text-sm font-medium text-gray-300"
+                            >
+                                API Key
+                            </label>
+
+                            <input
+                                id="api_key"
+                                v-model.trim="form.api_key"
+                                type="text"
+                                autocomplete="off"
+                                spellcheck="false"
+                                placeholder="Paste API Key here..."
+                                class="mt-1 block w-full bg-gray-900 border-gray-600 rounded-md shadow-sm text-white placeholder-gray-500 focus:border-teal-500 focus:ring-teal-500 sm:text-sm"
+                            />
+
+                            <div
+                                v-if="form.errors.api_key"
+                                class="text-red-400 text-xs mt-1"
+                            >
+                                {{ form.errors.api_key }}
+                            </div>
+                        </div>
+
+                        <div>
+                            <label
+                                for="api_secret"
+                                class="block text-sm font-medium text-gray-300"
+                            >
+                                Secret Key
+                            </label>
+
+                            <div class="relative mt-1">
+                                <input
+                                    id="api_secret"
+                                    v-model.trim="form.api_secret"
+                                    :type="showSecret ? 'text' : 'password'"
+                                    autocomplete="new-password"
+                                    spellcheck="false"
+                                    placeholder="Paste Secret Key here..."
+                                    class="block w-full bg-gray-900 border-gray-600 rounded-md shadow-sm text-white placeholder-gray-500 focus:border-teal-500 focus:ring-teal-500 sm:text-sm pr-10"
+                                />
+
+                                <button
+                                    v-if="form.api_secret"
+                                    type="button"
+                                    class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-300 hover:text-white"
+                                    @click="showSecret = !showSecret"
+                                >
+                                    {{ showSecret ? 'Hide' : 'Show' }}
+                                </button>
                             </div>
 
-                            <div>
-                                <label class="block text-sm font-medium text-gray-300">Secret Key</label>
-                                <div class="relative mt-1">
-                                    <input v-model="form.api_secret" :type="showSecret ? 'text' : 'password'"
-                                        class="block w-full bg-gray-900 border-gray-600 rounded-md shadow-sm text-white placeholder-gray-500 focus:border-teal-500 focus:ring-teal-500 sm:text-sm pr-10"
-                                        placeholder="Paste Secret Key here...">
-
-                                    <button v-if="form.api_secret" type="button" @click="showSecret = !showSecret"
-                                        class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-200 hover:text-white transition cursor-pointer">
-                                        <svg v-if="!showSecret" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5"
-                                            fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round"
-                                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                            <path stroke-linecap="round" stroke-linejoin="round"
-                                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                        </svg>
-                                        <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
-                                            viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round"
-                                                d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                                        </svg>
-                                    </button>
-                                </div>
-                                <div v-if="form.errors.api_secret" class="text-red-400 text-xs mt-1">
-                                    {{ form.errors.api_secret }}
-                                </div>
+                            <div
+                                v-if="form.errors.api_secret"
+                                class="text-red-400 text-xs mt-1"
+                            >
+                                {{ form.errors.api_secret }}
                             </div>
                         </div>
                     </div>
-
-                    <div class="bg-gray-900 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t border-gray-700">
-                        <button v-if="isEditing" @click="save" :disabled="form.processing"
-                            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-lg px-4 py-2 bg-gradient-to-r from-teal-500 to-cyan-500 text-base font-bold text-white hover:from-teal-600 hover:to-cyan-600 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
-                            Save Securely
-                        </button>
-                        <button v-else @click="$emit('close')"
-                            class="w-full inline-flex justify-center rounded-md border border-gray-600 shadow-sm px-4 py-2 bg-gray-800 text-base font-medium text-gray-300 hover:bg-gray-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
-                            Done
-                        </button>
-                        <button @click="$emit('close')"
-                            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-600 shadow-sm px-4 py-2 bg-gray-800 text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
-                            Cancel
-                        </button>
-                    </div>
                 </div>
-            </transition>
+
+                <!-- FOOTER -->
+                <div
+                    class="bg-gray-900 px-4 py-3 sm:px-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-3 border-t border-gray-700"
+                >
+                    <button
+                        v-if="isEditing"
+                        type="button"
+                        class="w-full sm:w-auto rounded-md border border-gray-600 px-4 py-2 bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white"
+                        @click="cancelEditing"
+                    >
+                        {{ apiConnection ? 'Back' : 'Cancel' }}
+                    </button>
+
+                    <button
+                        v-if="isEditing"
+                        type="button"
+                        :disabled="form.processing"
+                        class="w-full sm:w-auto rounded-md px-4 py-2 bg-gradient-to-r from-teal-500 to-cyan-500 font-bold text-white hover:from-teal-600 hover:to-cyan-600 disabled:opacity-50"
+                        @click="saveCredentials"
+                    >
+                        {{
+                            form.processing
+                                ? 'Verifying...'
+                                : apiConnection
+                                    ? 'Replace Securely'
+                                    : 'Connect Securely'
+                        }}
+                    </button>
+
+                    <button
+                        v-else
+                        type="button"
+                        class="w-full sm:w-auto rounded-md border border-gray-600 px-4 py-2 bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white"
+                        @click="emit('close')"
+                    >
+                        Done
+                    </button>
+                </div>
+            </div>
         </div>
     </transition>
 </template>
 
 <style scoped>
-/* This CSS hides the native browser "reveal password" eye icon (mostly for Edge/IE/Windows).
-   This prevents the "Double Eye" issue.
-*/
-input[type="password"]::-ms-reveal,
-input[type="password"]::-ms-clear {
+input[type='password']::-ms-reveal,
+input[type='password']::-ms-clear {
     display: none;
 }
 </style>
