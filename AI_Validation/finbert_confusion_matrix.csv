@@ -1,0 +1,4 @@
+﻿actual_sentiment,predicted_positive,predicted_negative,predicted_neutral
+positive,12,2,2
+negative,3,23,0
+neutral,1,0,17

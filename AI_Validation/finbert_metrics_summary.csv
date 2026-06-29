@@ -1,0 +1,6 @@
+﻿sentiment_class,precision,recall,f1_score,number_of_headlines
+positive,0.7500,0.7500,0.7500,16
+negative,0.9200,0.8846,0.9020,26
+neutral,0.8947,0.9444,0.9189,18
+macro_average,0.8549,0.8597,0.8570,60
+overall_accuracy,,,0.8667,60

@@ -1,0 +1,124 @@
+FIN SIGHT UNIT TEST PATCHES
+============================
+
+These are small refactors so that the JavaScript and Python tests test the
+same logic used by the actual application.
+
+1. ai_service/app.py
+--------------------
+
+Add this function after:
+
+    labels = ["positive", "negative", "neutral"]
+
+Add:
+
+    def calculate_risk_level(avg_negative):
+        risk_score = round(avg_negative * 100)
+
+        if risk_score >= 60:
+            risk_level = "High"
+        elif risk_score >= 35:
+            risk_level = "Medium"
+        else:
+            risk_level = "Low"
+
+        return risk_score, risk_level
+
+Then replace the current risk-score block:
+
+    risk_score = round(avg_negative * 100)
+
+    if risk_score >= 60:
+        risk_level = "High"
+    elif risk_score >= 35:
+        risk_level = "Medium"
+    else:
+        risk_level = "Low"
+
+with:
+
+    risk_score, risk_level = calculate_risk_level(
+        avg_negative
+    )
+
+
+2. resources/js/Pages/Dashboard.vue
+-----------------------------------
+
+Add this import:
+
+    import {
+        calculateRiskSimulation,
+        shouldShowRiskNudge,
+    } from '@/Utils/finSightCalculations';
+
+Replace:
+
+    if (riskScore >= 65 && props.changeAmount < 0) {
+
+with:
+
+    if (shouldShowRiskNudge(
+        riskScore,
+        props.changeAmount,
+    )) {
+
+Inside calculateRiskSimulation(), replace:
+
+    const estimatedLoss = currentValue * (dropPercent / 100);
+    const projectedValue = currentValue - estimatedLoss;
+
+with:
+
+    const {
+        estimatedLoss,
+        projectedValue,
+    } = calculateRiskSimulation(
+        currentValue,
+        dropPercent,
+    );
+
+
+3. resources/js/Pages/Market.vue
+--------------------------------
+
+Add this import:
+
+    import {
+        calculateMarketMoodIndex,
+        classifyMarketMood,
+    } from '@/Utils/finSightCalculations';
+
+Replace:
+
+    const moodIndex = Math.round(((positive - negative + 1) / 2) * 100);
+
+    let sentiment = 'Neutral';
+
+    if (moodIndex >= 61) {
+        sentiment = 'Bullish';
+    } else if (moodIndex <= 39) {
+        sentiment = 'Bearish';
+    }
+
+with:
+
+    const moodIndex = calculateMarketMoodIndex(
+        positive,
+        negative,
+    );
+
+    const sentiment = classifyMarketMood(
+        moodIndex,
+    );
+
+
+4. package.json
+---------------
+
+Add this script after the existing "dev" script:
+
+    "test:js": "node --test tests/js/finSightCalculations.test.js"
+
+Remember to place a comma after the previous script entry.

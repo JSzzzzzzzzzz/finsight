@@ -1,0 +1,71 @@
+FINSIGHT UNIT TEST RUN INSTRUCTIONS
+===================================
+
+IMPORTANT
+---------
+Run these tests on the testing configuration already defined in phpunit.xml.
+Your repository currently uses an in-memory SQLite database for Laravel tests,
+so the actual development MySQL records are not modified.
+
+A. COPY THE FILES
+-----------------
+Copy each file from this pack into the same path inside the FinSight project.
+
+B. APPLY THE SMALL PATCHES
+--------------------------
+Follow PATCHES_REQUIRED.txt before running the JavaScript and Python tests.
+
+C. RUN LARAVEL TESTS
+--------------------
+Open PowerShell in the FinSight project folder and run:
+
+    php artisan config:clear
+    php artisan test tests/Feature/FinSightUnitTest.php -v
+
+This covers:
+UT-01, UT-02, UT-03, UT-04, UT-05, UT-07, UT-11, UT-12, UT-13, UT-14
+
+D. RUN JAVASCRIPT TESTS
+-----------------------
+Run:
+
+    npm run test:js
+
+This covers:
+UT-06, UT-09, UT-10
+
+E. RUN PYTHON / FINBERT TESTS
+-----------------------------
+Activate the same Python virtual environment used by ai_service.
+
+Install pytest only when it is not already installed:
+
+    pip install pytest
+
+Then run:
+
+    cd ai_service
+    pytest test_app.py -v
+
+This covers:
+UT-08
+
+F. SEND BACK THE RESULTS
+------------------------
+Send the complete terminal outputs for all three commands:
+
+1. php artisan test tests/Feature/FinSightUnitTest.php -v
+2. npm run test:js
+3. pytest test_app.py -v
+
+Also send any error trace in full. Do not change a failed result manually.
+The result table should be completed from the observed output.
+
+G. SCREENSHOT EVIDENCE
+----------------------
+Capture:
+- Laravel terminal summary
+- JavaScript terminal summary
+- Python terminal summary
+- Any failed-test trace
+- Database evidence only if a Laravel test reports a mismatch

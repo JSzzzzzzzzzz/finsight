@@ -13,6 +13,20 @@ model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME)
 
 labels = ["positive", "negative", "neutral"]
 
+
+def calculate_risk_level(avg_negative):
+    risk_score = round(avg_negative * 100)
+
+    if risk_score >= 60:
+        risk_level = "High"
+    elif risk_score >= 35:
+        risk_level = "Medium"
+    else:
+        risk_level = "Low"
+
+    return risk_score, risk_level
+
+
 @app.route("/analyze-sentiment", methods=["POST"])
 def analyze_sentiment():
     data = request.get_json()
@@ -41,7 +55,10 @@ def analyze_sentiment():
 
         with torch.no_grad():
             outputs = model(**inputs)
-            probabilities = torch.nn.functional.softmax(outputs.logits, dim=-1)[0]
+            probabilities = torch.nn.functional.softmax(
+                outputs.logits,
+                dim=-1
+            )[0]
 
         positive = float(probabilities[0])
         negative = float(probabilities[1])
@@ -68,14 +85,7 @@ def analyze_sentiment():
     avg_neutral = total_neutral / count
 
     # Risk score: higher negative sentiment = higher risk
-    risk_score = round(avg_negative * 100)
-
-    if risk_score >= 60:
-        risk_level = "High"
-    elif risk_score >= 35:
-        risk_level = "Medium"
-    else:
-        risk_level = "Low"
+    risk_score, risk_level = calculate_risk_level(avg_negative)
 
     return jsonify({
         "average": {
@@ -88,6 +98,7 @@ def analyze_sentiment():
         "results": results
     })
 
+
 @app.route("/", methods=["GET"])
 def health_check():
     return jsonify({
@@ -95,6 +106,6 @@ def health_check():
         "service": "FinBERT AI Service"
     }), 200
 
+
 if __name__ == "__main__":
     app.run(port=5001, debug=True)
-

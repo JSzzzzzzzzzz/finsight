@@ -4,19 +4,30 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\Auth;
+use Symfony\Component\HttpFoundation\Response;
 
 class CheckUserStatus
 {
-    public function handle(Request $request, Closure $next)
-    {
-        if (Auth::check() && Auth::user()->status === 'banned') {
-
+    public function handle(
+        Request $request,
+        Closure $next
+    ): Response {
+        if (
+            Auth::check()
+            && Auth::user()->status === 'banned'
+        ) {
             Auth::guard('web')->logout();
 
-            return redirect()->route('login')
-                ->with('error', 'Your account has been banned.');
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()
+                ->route('login')
+                ->with(
+                    'error',
+                    'Your account has been banned.'
+                );
         }
 
         return $next($request);

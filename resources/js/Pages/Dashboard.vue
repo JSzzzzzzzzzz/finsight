@@ -6,6 +6,10 @@ import RiskModal from '@/Components/RiskModal.vue';
 import RiskNudgeModal from '@/Components/RiskNudgeModal.vue';
 import { ref, onMounted } from 'vue';
 import { router } from '@inertiajs/vue3';
+import {
+    calculateRiskSimulation as calculateRiskSimulationValues,
+    shouldShowRiskNudge,
+} from '@/Utils/finSightCalculations';
 
 const showLeaderboard = ref(false);
 const showRiskModal = ref(false);
@@ -70,7 +74,10 @@ const checkRiskNudge = async () => {
             changeAmount: props.changeAmount,
         });
 
-        if (riskScore >= 65 && props.changeAmount < 0) {
+        if (shouldShowRiskNudge(
+            riskScore,
+            props.changeAmount,
+        )) {
             riskNudge.value = {
                 title: 'AI Risk Nudge: Elevated Portfolio Risk',
                 message: 'FinSight detected negative market sentiment while your portfolio value is declining.',
@@ -86,6 +93,8 @@ const checkRiskNudge = async () => {
     }
 };
 
+
+
 const triggerRiskSimulation = () => {
     calculateRiskSimulation('Moderate', 15);
     showRiskModal.value = true;
@@ -94,8 +103,16 @@ const triggerRiskSimulation = () => {
 
 const calculateRiskSimulation = (scenario, dropPercent) => {
     const currentValue = props.totalBalance ?? 0;
-    const estimatedLoss = currentValue * (dropPercent / 100);
-    const projectedValue = currentValue - estimatedLoss;
+    // const estimatedLoss = currentValue * (dropPercent / 100);
+    // const projectedValue = currentValue - estimatedLoss;
+
+    const {
+        estimatedLoss,
+        projectedValue,
+    } = calculateRiskSimulationValues(
+        currentValue,
+        dropPercent,
+    );
 
     riskSimulation.value = {
         title: 'Risk Simulation: Market Drop Scenario',

@@ -3,6 +3,11 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import CoinAnalysisModal from '@/Components/CoinAnalysisModal.vue';
 import MobileChartModal from '@/Components/MobileChartModal.vue';
 import { onMounted, onUnmounted, ref } from 'vue';
+import {
+    calculateMarketMoodIndex,
+    classifyMarketMood,
+} from '@/Utils/finSightCalculations';
+
 const showAnalysis = ref(false);
 const showMobileChart = ref(false);
 const selectedCoin = ref(null);
@@ -74,15 +79,24 @@ const fetchMarketSummary = async () => {
         const negative = average.negative ?? 0;
         const neutral = average.neutral ?? 0;
 
-        const moodIndex = Math.round(((positive - negative + 1) / 2) * 100);
+        // const moodIndex = Math.round(((positive - negative + 1) / 2) * 100);
 
-        let sentiment = 'Neutral';
+        // let sentiment = 'Neutral';
 
-        if (moodIndex >= 61) {
-            sentiment = 'Bullish';
-        } else if (moodIndex <= 39) {
-            sentiment = 'Bearish';
-        }
+        // if (moodIndex >= 61) {
+        //     sentiment = 'Bullish';
+        // } else if (moodIndex <= 39) {
+        //     sentiment = 'Bearish';
+        // }
+
+        const moodIndex = calculateMarketMoodIndex(
+            positive,
+            negative,
+        );
+
+        const sentiment = classifyMarketMood(
+            moodIndex,
+        );
 
         aiSummary.value = {
             sentiment,
