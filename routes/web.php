@@ -60,10 +60,18 @@ Route::middleware([
 
     // A. System Health (Dashboard)
     Route::get('/admin/dashboard', function () {
+        if (! Auth::user()->is_admin) {
+            abort(403, 'Unauthorized');
+        }
+
         return Inertia::render('Admin/ADashboard');
     })->name('admin.dashboard');
 
     Route::get('/admin/system-health-data', function () {
+        if (! Auth::user()->is_admin) {
+            abort(403, 'Unauthorized');
+        }
+
         $services = [];
 
         $check = function ($name, $url) {
@@ -177,39 +185,83 @@ Route::middleware([
     })->name('admin.pairs.destroy');
 
     Route::post('/admin/pairs/import-luno', function () {
-        if (!Auth::user()->is_admin) abort(403, 'Unauthorized');
-
-        $luno = new LunoService();
-        $data = $luno->getMarkets();
-
-        $topPairs = [
-            'XBTMYR',
-            'ETHMYR',
-            'XRPMYR',
-            'SOLMYR',
-            'ADAMYR',
-            'LINKMYR',
-            'AVAXMYR',
-            'BCHMYR',
-            'LTCMYR',
-            'UNIMYR',
-        ];
-
-        $markets = collect($data['markets'] ?? [])
-            ->filter(fn($market) => in_array($market['market_id'], $topPairs))
-            ->sortBy(fn($market) => array_search($market['market_id'], $topPairs));
-
-        foreach ($markets as $market) {
-            TradingPair::firstOrCreate(
-                ['symbol' => $market['market_id']],
-                [
-                    'source' => 'Luno',
-                    'is_active' => true,
-                ]
-            );
+        if (! Auth::user()->is_admin) {
+            abort(403, 'Unauthorized');
         }
 
-        return back();
+        try {
+            $luno = new LunoService();
+            $data = $luno->getMarkets();
+
+            $topPairs = [
+                'XBTMYR',
+                'ETHMYR',
+                'XRPMYR',
+                'SOLMYR',
+                'ADAMYR',
+                'LINKMYR',
+                'AVAXMYR',
+                'BCHMYR',
+                'LTCMYR',
+                'UNIMYR',
+            ];
+
+            $markets = collect($data['markets'] ?? [])
+                ->filter(function ($market) use ($topPairs) {
+                    return isset($market['market_id'])
+                        && in_array($market['market_id'], $topPairs);
+                })
+                ->sortBy(function ($market) use ($topPairs) {
+                    return array_search($market['market_id'], $topPairs);
+                });
+
+            if ($markets->isEmpty()) {
+                return back()->with(
+                    'error',
+                    'No supported trading pairs were returned by Luno.'
+                );
+            }
+
+            $createdCount = 0;
+            $skippedCount = 0;
+
+            foreach ($markets as $market) {
+                $pair = TradingPair::firstOrCreate(
+                    [
+                        'symbol' => $market['market_id'],
+                    ],
+                    [
+                        'source' => 'Luno',
+                        'is_active' => true,
+                    ]
+                );
+
+                if ($pair->wasRecentlyCreated) {
+                    $createdCount++;
+                } else {
+                    $skippedCount++;
+                }
+            }
+
+            if ($createdCount === 0) {
+                return back()->with(
+                    'success',
+                    "No new pairs were imported. All {$skippedCount} supported pairs already exist."
+                );
+            }
+
+            return back()->with(
+                'success',
+                "{$createdCount} pair(s) imported successfully. {$skippedCount} existing pair(s) skipped."
+            );
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return back()->with(
+                'error',
+                'Unable to import Luno trading pairs. Please try again.'
+            );
+        }
     })->name('admin.pairs.import-luno');
 
     Route::patch('/admin/pairs/{pair}/toggle', function (TradingPair $pair) {

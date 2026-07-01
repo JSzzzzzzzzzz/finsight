@@ -2,23 +2,66 @@
 import AppLayout from '@/Layouts/AppLayout.vue';
 import ChangePasswordModal from '@/Components/ChangePasswordModal.vue';
 import EditProfileModal from '@/Components/EditProfileModal.vue';
-import { ref } from 'vue';
-import { usePage } from '@inertiajs/vue3';
+import { ref, computed } from 'vue';
+import { usePage, useForm } from '@inertiajs/vue3';
 
 const page = usePage();
-const user = page.props.auth.user;
+const user = computed(() => page.props.auth.user);
 
 const showPasswordModal = ref(false);
 const showEditProfileModal = ref(false);
+const showDeleteModal = ref(false);
+
+const deletePasswordInput = ref(null);
+
+const deleteForm = useForm({
+    password: '',
+});
 
 const getInitials = (name) => {
-    return name ? name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'USER';
+    return name
+        ? name
+            .split(' ')
+            .map(n => n[0])
+            .join('')
+            .substring(0, 2)
+            .toUpperCase()
+        : 'USER';
 };
 
-const confirmDelete = () => {
-    if (confirm("ARE YOU SURE?\n\nThis will permanently delete your account and all data. This action cannot be undone.")) {
-        alert("Account deletion simulation complete.");
+const openDeleteModal = () => {
+    deleteForm.clearErrors();
+    showDeleteModal.value = true;
+
+    setTimeout(() => {
+        deletePasswordInput.value?.focus();
+    }, 250);
+};
+
+const closeDeleteModal = () => {
+    if (deleteForm.processing) {
+        return;
     }
+
+    showDeleteModal.value = false;
+    deleteForm.reset();
+    deleteForm.clearErrors();
+};
+
+const deleteAccount = () => {
+    deleteForm.delete(route('current-user.destroy'), {
+        preserveScroll: true,
+
+        onError: () => {
+            setTimeout(() => {
+                deletePasswordInput.value?.focus();
+            }, 0);
+        },
+
+        onFinish: () => {
+            deleteForm.reset();
+        },
+    });
 };
 </script>
 
@@ -93,8 +136,9 @@ const confirmDelete = () => {
                         <p class="text-sm text-gray-400 mb-4">
                             Once you delete your account, there is no going back. Please be certain.
                         </p>
-                        <button @click="confirmDelete"
-                            class="bg-red-500/10 text-red-500 border border-red-500/50 hover:bg-red-500 hover:text-white px-4 py-2 rounded text-sm font-bold transition">
+                        <button type="button"
+                            class="bg-red-500/10 text-red-500 border border-red-500/50 hover:bg-red-500 hover:text-white px-4 py-2 rounded text-sm font-bold transition"
+                            @click="openDeleteModal">
                             Delete My Account
                         </button>
                     </div>
@@ -105,6 +149,76 @@ const confirmDelete = () => {
 
         <ChangePasswordModal :show="showPasswordModal" @close="showPasswordModal = false" />
         <EditProfileModal :show="showEditProfileModal" :user="user" @close="showEditProfileModal = false" />
+        <!-- Delete Account Confirmation Modal -->
+        <transition enter-active-class="transition ease-out duration-300" enter-from-class="opacity-0"
+            enter-to-class="opacity-100" leave-active-class="transition ease-in duration-200"
+            leave-from-class="opacity-100" leave-to-class="opacity-0">
+            <div v-if="showDeleteModal"
+                class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm"
+                @click="closeDeleteModal">
+                <div class="bg-gray-800 rounded-lg shadow-2xl overflow-hidden w-full max-w-md m-4 border border-red-900"
+                    @click.stop>
+                    <form @submit.prevent="deleteAccount">
+                        <!-- Header -->
+                        <div
+                            class="bg-gradient-to-r from-red-700 to-red-500 px-4 py-3 flex justify-between items-center">
+                            <h3 class="text-base font-bold text-white">
+                                Delete Account
+                            </h3>
+
+                            <button type="button" class="text-red-100 hover:text-white transition"
+                                :disabled="deleteForm.processing" @click="closeDeleteModal">
+                                ✕
+                            </button>
+                        </div>
+
+                        <!-- Content -->
+                        <div class="p-6">
+                            <p class="text-sm text-gray-300">
+                                Are you sure you want to permanently delete your
+                                FinSight account? Your profile, exchange credentials,
+                                portfolio records and related data will be removed.
+                                This action cannot be undone.
+                            </p>
+
+                            <div class="mt-5">
+                                <label for="delete-password" class="block text-sm font-medium text-gray-300">
+                                    Enter your current password to confirm
+                                </label>
+
+                                <input id="delete-password" ref="deletePasswordInput" v-model="deleteForm.password"
+                                    type="password" required autocomplete="current-password"
+                                    placeholder="Current password"
+                                    class="mt-2 block w-full bg-gray-900 border-gray-600 rounded-md shadow-sm text-white focus:ring-red-500 focus:border-red-500 sm:text-sm" />
+
+                                <p v-if="deleteForm.errors.password" class="mt-2 text-xs text-red-400">
+                                    {{ deleteForm.errors.password }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="bg-gray-900 px-4 py-3 sm:px-6 flex justify-end border-t border-gray-700">
+                            <button type="button"
+                                class="mr-3 px-4 py-2 text-sm font-bold text-gray-300 hover:text-white transition disabled:opacity-50"
+                                :disabled="deleteForm.processing" @click="closeDeleteModal">
+                                Cancel
+                            </button>
+
+                            <button type="submit"
+                                class="px-4 py-2 bg-red-600 text-white text-sm font-bold rounded shadow hover:bg-red-700 transition disabled:opacity-50"
+                                :disabled="deleteForm.processing">
+                                {{
+                                    deleteForm.processing
+                                        ? 'Deleting...'
+                                        : 'Permanently Delete'
+                                }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </transition>
 
     </AppLayout>
 </template>

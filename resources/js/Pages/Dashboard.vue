@@ -94,7 +94,6 @@ const checkRiskNudge = async () => {
 };
 
 
-
 const triggerRiskSimulation = () => {
     calculateRiskSimulation('Moderate', 15);
     showRiskModal.value = true;

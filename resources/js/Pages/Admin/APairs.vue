@@ -1,6 +1,19 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
-import { useForm, router } from '@inertiajs/vue3';
+import { useForm, router, usePage } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
+
+const page = usePage();
+
+const importingPairs = ref(false);
+
+const successMessage = computed(
+    () => page.props.flash?.success ?? null
+);
+
+const errorMessage = computed(
+    () => page.props.flash?.error ?? null
+);
 
 const props = defineProps({
     pairs: Array
@@ -11,9 +24,21 @@ const form = useForm({
 });
 
 const importLunoPairs = () => {
-    router.post(route('admin.pairs.import-luno'), {}, {
-        preserveScroll: true
-    });
+    router.post(
+        route('admin.pairs.import-luno'),
+        {},
+        {
+            preserveScroll: true,
+
+            onStart: () => {
+                importingPairs.value = true;
+            },
+
+            onFinish: () => {
+                importingPairs.value = false;
+            },
+        }
+    );
 };
 
 const togglePair = (id) => {
@@ -45,9 +70,7 @@ const displayPair = (symbol) => {
     return symbol === 'XBTMYR' ? 'BTCMYR' : symbol;
 };
 
-const displaySymbolInitial = (symbol) => {
-    return symbol === 'XBTMYR' ? 'B' : symbol.substring(0, 1);
-};
+
 </script>
 
 <template>
@@ -61,6 +84,17 @@ const displaySymbolInitial = (symbol) => {
         <div class="py-12">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
 
+                <!-- IMPORT RESULT MESSAGE -->
+                <div v-if="successMessage"
+                    class="rounded-lg border border-teal-500/40 bg-teal-500/10 px-4 py-3 text-sm text-teal-300">
+                    {{ successMessage }}
+                </div>
+
+                <div v-if="errorMessage"
+                    class="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                    {{ errorMessage }}
+                </div>
+
                 <!-- IMPORT LUNO PAIRS -->
                 <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -68,18 +102,19 @@ const displaySymbolInitial = (symbol) => {
                             <h3 class="text-white font-bold text-lg">
                                 Import Exchange Trading Pairs
                             </h3>
+
                             <p class="text-gray-400 text-sm mt-1">
-                                 Existing pairs will be skipped.
+                                Existing pairs will be skipped.
                             </p>
                         </div>
 
-                        <button @click="importLunoPairs"
-                            class="bg-teal-500 hover:bg-teal-400 text-white font-bold px-6 py-3 rounded-lg transition">
-                            Import Pairs
+                        <button type="button"
+                            class="bg-teal-500 hover:bg-teal-400 text-white font-bold px-6 py-3 rounded-lg transition disabled:cursor-not-allowed disabled:opacity-50"
+                            :disabled="importingPairs" @click="importLunoPairs">
+                            {{ importingPairs ? 'Importing...' : 'Import Pairs' }}
                         </button>
                     </div>
                 </div>
-
                 <!-- PAIRS TABLE -->
                 <div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700 overflow-hidden">
                     <table class="min-w-full divide-y divide-gray-700">
@@ -103,7 +138,7 @@ const displaySymbolInitial = (symbol) => {
                         <tbody class="divide-y divide-gray-700">
                             <tr v-for="pair in props.pairs" :key="pair.id">
                                 <td class="px-6 py-4 font-bold text-white">
-                                   {{ displayPair(pair.symbol) }}
+                                    {{ displayPair(pair.symbol) }}
                                 </td>
 
                                 <td class="px-6 py-4 text-gray-400 text-sm">
